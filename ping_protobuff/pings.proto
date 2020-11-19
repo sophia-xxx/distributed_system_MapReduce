@@ -1,0 +1,41 @@
+syntax = "proto3";
+package distributed_group_membership;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = ".;pings";
+
+message UDPAddressProto {
+    bytes ip = 1;
+    int32 port = 2;
+    string zone = 3;
+}
+
+message FileMetaDataProto {
+    uint64 fileSize = 1;
+    google.protobuf.Timestamp lastTime = 2;
+    repeated int32 servers = 3;
+    bool writing = 4;
+    uint32 numAckWriting = 5;
+    uint32 numAckReading = 6;
+    uint32 numReading = 7;
+}
+
+message TableEntryProto {
+    UDPAddressProto address = 1;
+    google.protobuf.Timestamp joinTime = 2;
+    google.protobuf.Timestamp lastTime = 3;
+    uint32 index = 4;
+    int32 status = 5;
+    int64 fileMemoryUsed = 6;
+}
+
+message TableMessasgeProto {
+    int32 msgType = 1;
+    TableEntryProto sender = 2;
+    repeated TableEntryProto table = 3;
+    bool gossip = 4;
+    map<string, FileMetaDataProto> files = 5;
+    string filename = 6;
+    FileMetaDataProto fileData = 7;
+}
