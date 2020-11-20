@@ -11,11 +11,11 @@ import (
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"mp2-master/detect_failures"
-	"mp2-master/file_system"
-	"mp2-master/join_and_leave"
-	"mp2-master/net_node"
-	pings "mp2-master/ping_protobuff"
+	"mp3/detect_failures"
+	"mp3/file_system"
+	"mp3/join_and_leave"
+	"mp3/net_node"
+	pings "mp3/ping_protobuff"
 )
 
 func run_udp(n *net_node.Node) {

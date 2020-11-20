@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"mp2-master/net_node"
-	"mp2-master/run_server"
+	"mp3/net_node"
+	"mp3/run_server"
 	"os"
 	"strings"
 )

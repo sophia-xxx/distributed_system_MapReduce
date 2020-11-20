@@ -8,8 +8,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"mp2-master/net_node"
-	pings "mp2-master/ping_protobuff"
+	"mp3/net_node"
+	pings "mp3/ping_protobuff"
 )
 
 func AddNewNodeToTable(n *net_node.Node, msg *pings.TableMessasgeProto) {

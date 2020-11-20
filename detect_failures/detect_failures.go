@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"mp2-master/file_system"
-	"mp2-master/net_node"
-	pings "mp2-master/ping_protobuff"
+	"mp3/file_system"
+	"mp3/net_node"
+	pings "mp3/ping_protobuff"
 )
 
 /*

@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	pings "mp2-master/ping_protobuff"
+	pings "mp3/ping_protobuff"
 )
 
 // Node Statuses
