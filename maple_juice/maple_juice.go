@@ -97,14 +97,14 @@ type Server struct {
 
 // features to describe maple/juice task
 type Task struct {
-	TaskNum  int
-	FileName string
-	FilePath string
-	Status   string
-	TaskType string // "maple"/"juice"
-	ServerIp string // server in charge of this task
-	SourceIp string // server has that file
-	LastTime *timestamppb.Timestamp
+	TaskNum       int
+	SdfsFileName  string
+	LocalFileName string
+	Status        string
+	TaskType      string // "maple"/"juice"
+	ServerIp      string // server in charge of this task
+	SourceIp      string // server has that file
+	LastTime      *timestamppb.Timestamp
 }
 
 /*
@@ -126,20 +126,20 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// var fileReq = make(chan bool)
 	node := mapleServer.NodeInfo
 	// check if we have the file
-	if _, ok := mapleServer.NodeInfo.Files[args.FileName]; !ok {
-		fmt.Println(args.FileName, "not exist!")
+	if _, ok := mapleServer.NodeInfo.Files[args.SdfsFileName]; !ok {
+		fmt.Println(args.SdfsFileName, "not exist!")
 		return nil
 	}
-	go file_system.GetFile(node, args.FileName, args.FilePath)
+	go file_system.GetFile(node, args.SdfsFileName, args.LocalFileName)
 	time.Sleep(GETFILEWAIT)
 	// check if we get the file
-	if !WhetherFileExist(args.FileName) {
-		fmt.Println("Can't get the file:  " + args.FileName + ". Check the Internet!")
+	if !WhetherFileExist(args.LocalFileName) {
+		fmt.Println("Can't get the file:  " + args.SdfsFileName + ". Check the Internet!")
 		return nil
 	}
 
-	fileClip, err := os.Open(args.FileName) // TODO：is this filename same as local_filePath??
-	input_FileName := arg.FileName          //need update
+	fileClip, err := os.Open(args.LocalFileName)
+	//input_FileName := args.SdfsFileName         //need update
 	net_node.CheckError(err)
 	defer fileClip.Close()
 	// execute maple_exe
@@ -148,7 +148,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// get a "result" file after the maple_exe finished
 	// scan the "result" file by line to map and using this map to output file
 
-	sdfs_prefix = args.prefix //need add a prefix parameter in args
+	//sdfs_prefix = args.prefix //need add a prefix parameter in args
 
 	//read in stdin now, need to use some sort of ifstream
 	var of_map map[string]*os.File
@@ -164,12 +164,12 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		key := str[0]
 		f, ok := of_map[key]
 		if !ok {
-			append_file_name := sdfs_prefix + "_" + key
+			append_file_name := FILEPREFIX + key
 			//f, err := os.OpenFile(append_file_name, os.O_RDONLY|os.O_CREATE|os.O_APPEND, 0666)
 			f, err := os.Create(append_file_name)
 			if err != nil {
 				log.Println("open file error :", err)
-				return
+				return nil
 			}
 			of_map[key] = f
 		}
@@ -177,7 +177,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		_, err := f.WriteString(line + "\n")
 		if err != nil {
 			log.Println(err)
-			return
+			return nil
 		}
 	}
 	for key := range of_map {
