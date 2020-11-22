@@ -10,21 +10,28 @@ import (
 	"net/rpc"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
-var FILECLIPNAME = "sdfs_src_file_clip_"
-var FILEPREFIX = "sdfs_intermediate_file_prefix_"
-var RPCPORT = "1234"
+const (
+	CLIPPREFIX  = "sdfs_src_file_clip_"
+	FILEPREFIX  = "sdfs_intermediate_file_prefix_"
+	RPCPORT     = "1234"
+	GETFILEWAIT = 4 * time.Second
+)
+
+var TimeFormat = "2006-01-02 15:04:05"
 
 /*
 client split the whole sdfs_src_file and generate file clips
 */
 func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileName string) map[int]string {
+	fmt.Println(">>Start clipping files")
 	fileClips := make(map[int]string, mapleNum)
 	// get sdfs_src_file
 	go file_system.GetFile(n, sdfsFileName, localFileName)
-	time.Sleep(4 * time.Second)
+	time.Sleep(GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(localFileName) {
 		fmt.Println("Can't get the file:  " + sdfsFileName + ". Check the Internet!")
@@ -48,7 +55,7 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 		count := 0
 		var fileSplit *os.File
 		// create new files for different file clips
-		fileSplit, _ = os.Create(FILECLIPNAME + strconv.Itoa(count))
+		fileSplit, _ = os.Create(CLIPPREFIX + strconv.Itoa(count))
 		defer fileSplit.Close()
 		for i := 0; i < splitLines-1; i++ {
 			line := fileScanner.Text()
@@ -66,11 +73,11 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 		fileSplit.WriteString(line)
 		// check whether this write successfully
 		fileInfo, _ := fileSplit.Stat()
-		fileClips[count] = FILECLIPNAME + strconv.Itoa(count)
+		fileClips[count] = CLIPPREFIX + strconv.Itoa(count)
 		fmt.Println("File clip: ", fileInfo.Size())
 		count++
 	}
-
+	fmt.Println(">>Finish clipping files")
 	return fileClips
 }
 
@@ -122,7 +129,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		return nil
 	}
 	go file_system.GetFile(node, args.FileName, args.FilePath)
-	time.Sleep(4 * time.Second)
+	time.Sleep(GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(args.FileName) {
 		fmt.Println("Can't get the file:  " + args.FileName + ". Check the Internet!")
@@ -238,4 +245,8 @@ func WhetherFileExist(filepath string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func getTimeString() string {
+	return "(" + strings.Split(time.Now().Format(TimeFormat), " ")[1] + ")"
 }
