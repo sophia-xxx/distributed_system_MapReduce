@@ -3,14 +3,17 @@ package maple_juice
 import (
 	"bufio"
 	"fmt"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"log"
 	"mp3/file_system"
 	"mp3/net_node"
 	"net"
 	"net/rpc"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var FILECLIPNAME = "sdfs_src_file_clip_"
@@ -130,11 +133,51 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	}
 
 	fileClip, err := os.Open(args.FileName) // TODO：is this filename same as local_filePath??
+	input_FileName := arg.FileName          //need update
 	net_node.CheckError(err)
 	defer fileClip.Close()
 	// execute maple_exe
 
 	// how to deal with maple_local_file??
+	// get a "result" file after the maple_exe finished
+	// scan the "result" file by line to map and using this map to output file
+
+	sdfs_prefix = args.prefix //need add a prefix parameter in args
+
+	//read in stdin now, need to use some sort of ifstream
+	var of_map map[string]*os.File
+	of_map = make(map[string]*os.File)
+	input := bufio.NewScanner(os.Stdin) // need update to input file stream
+	for {
+		if !input.Scan() {
+			break
+		}
+		line := input.Text()
+		line = strings.TrimSpace(line)
+		str := strings.Split(line, " ")
+		key := str[0]
+		f, ok := of_map[key]
+		if !ok {
+			append_file_name := sdfs_prefix + "_" + key
+			//f, err := os.OpenFile(append_file_name, os.O_RDONLY|os.O_CREATE|os.O_APPEND, 0666)
+			f, err := os.Create(append_file_name)
+			if err != nil {
+				log.Println("open file error :", err)
+				return
+			}
+			of_map[key] = f
+		}
+		f = of_map[key]
+		_, err := f.WriteString(line + "\n")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+	for key := range of_map {
+		of_map[key].Close()
+	}
+
 	return nil
 }
 
