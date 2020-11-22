@@ -20,18 +20,18 @@ var RPCPORT = "1234"
 /*
 client split the whole sdfs_src_file and generate file clips
 */
-func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFilePath string) map[int]string {
+func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileName string) map[int]string {
 	fileClips := make(map[int]string, mapleNum)
 	// get sdfs_src_file
-	go file_system.GetFile(n, sdfsFileName, localFilePath)
+	go file_system.GetFile(n, sdfsFileName, localFileName)
 	time.Sleep(4 * time.Second)
 	// check if we get the file
-	if !WhetherFileExist(localFilePath) {
+	if !WhetherFileExist(localFileName) {
 		fmt.Println("Can't get the file:  " + sdfsFileName + ". Check the Internet!")
 		return nil
 	}
 	// read lines of file
-	file, _ := os.Open(localFilePath)
+	file, _ := os.Open(localFileName)
 	defer file.Close()
 	fileScanner := bufio.NewScanner(file)
 	lineCount := 0
