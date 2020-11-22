@@ -7,6 +7,8 @@ import (
 	"mp3/net_node"
 	"net"
 	"net/rpc"
+	"os"
+	"time"
 )
 
 /*
@@ -14,14 +16,14 @@ split the whole sdfs file and generate file clips for every maple task
 */
 func splitFile(filePath string, mapleNum int) []string {
 	fileClips := make([]string, mapleNum)
-	// TODO:read lines of sdfs_src_file
+	// TODO:get sdfs_src_file
+	// TODO:read lines of
 	return fileClips
 }
 
 // define server interface
 type Server struct {
-	IP   string
-	Port string
+	NodeInfo *net_node.Node
 }
 
 // features to describe maple/juice task
@@ -33,16 +35,17 @@ type Task struct {
 	FileEnd   int
 	Status    string
 	TaskType  string // "maple"/"juice"
-	ServerIp  string
+	ServerIp  string // server in charge of this task
+	SourceIp  string // server has that file
 	LastTime  *timestamppb.Timestamp
 }
 
 /*
 init sever
 */
-func (mapleServer *Server) newMapleServer() *Server {
+func (mapleServer *Server) newMapleServer(n *net_node.Node) *Server {
 	server := &Server{
-		//TODO:get ip and port of this node
+		NodeInfo: n,
 	}
 	return server
 }
@@ -53,12 +56,24 @@ Server run maple task on file clip
 //fileName string, fileStart int, fileEnd int
 func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// read file clip, same as "get" command
-	node := &net_node.Node{
-		//TODO: how to use node??
+	// var fileReq = make(chan bool)
+	node := mapleServer.NodeInfo
+	// check if we have the file
+	if _, ok := mapleServer.NodeInfo.Files[args.FileName]; !ok {
+		fmt.Println(args.FileName, "not exist!")
+		return nil
 	}
 	go file_system.GetFile(node, args.FileName, args.FilePath)
-	//TODO: notify that the file has been stored successfully
+	time.Sleep(4 * time.Second)
+	// check if we get the file
+	if !WhetherFileExist(args.FileName) {
+		fmt.Println("Can't get the file:  " + args.FileName + ". Check the Internet!")
+		return nil
+	}
 
+	sdfsFile, err := os.Open(args.FileName) // TODO：is this filename same as local_filePath??
+	net_node.CheckError(err)
+	defer sdfsFile.Close()
 	// execute maple_exe
 
 	// reply to master
@@ -128,6 +143,9 @@ func shuffle() {
 	mapleResults := make([]string, 9)
 	callServer := client.Go("MJServer.MapleTask", args, mapleResults, nil)
 	replyCall := <-callServer.Done
+	if replyCall.Error != nil {
+
+	}
 
 }
 
@@ -155,4 +173,13 @@ Master clean all intermediate file in sdfs, same as "delete" command
 */
 func cleanAllFiles() {
 
+}
+
+/*****Utils*****/
+func WhetherFileExist(filepath string) bool {
+	info, err := os.Stat(filepath)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
