@@ -1,6 +1,7 @@
 package maple_juice
 
 import (
+	"bufio"
 	"fmt"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"mp3/file_system"
@@ -8,17 +9,76 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"strconv"
 	"time"
 )
 
+var FILECLIPNAME = "sdfs_src_file_clip_"
+var FILEPREFIX = "sdfs_intermediate_file_prefix_"
+var RPCPORT = "1234"
+
 /*
-split the whole sdfs file and generate file clips for every maple task
+client split the whole sdfs_src_file and generate file clips
 */
-func splitFile(filePath string, mapleNum int) []string {
-	fileClips := make([]string, mapleNum)
-	// TODO:get sdfs_src_file
-	// TODO:read lines of
+func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFilePath string) map[int]string {
+	fileClips := make(map[int]string, mapleNum)
+	// get sdfs_src_file
+	go file_system.GetFile(n, sdfsFileName, localFilePath)
+	time.Sleep(4 * time.Second)
+	// check if we get the file
+	if !WhetherFileExist(localFilePath) {
+		fmt.Println("Can't get the file:  " + sdfsFileName + ". Check the Internet!")
+		return nil
+	}
+	// read lines of file
+	file, _ := os.Open(localFilePath)
+	defer file.Close()
+	fileScanner := bufio.NewScanner(file)
+	lineCount := 0
+	for fileScanner.Scan() {
+		lineCount++
+	}
+	fmt.Println("File has " + strconv.Itoa(lineCount) + " lines.")
+	// split file into file clips, then generate list of fileNames
+	splitLines := lineCount/mapleNum + 1
+	fileScanner = bufio.NewScanner(file)
+	// determine whether the file is end
+	endScan := false
+	for fileScanner.Scan() {
+		count := 0
+		var fileSplit *os.File
+		// create new files for different file clips
+		fileSplit, _ = os.Create(FILECLIPNAME + strconv.Itoa(count))
+		defer fileSplit.Close()
+		for i := 0; i < splitLines-1; i++ {
+			line := fileScanner.Text()
+			fileSplit.WriteString(line)
+			if !fileScanner.Scan() {
+				endScan = true
+				break
+			}
+		}
+		if endScan {
+			break
+		}
+		// last line
+		line := fileScanner.Text()
+		fileSplit.WriteString(line)
+		// check whether this write successfully
+		fileInfo, _ := fileSplit.Stat()
+		fileClips[count] = FILECLIPNAME + strconv.Itoa(count)
+		fmt.Println("File clip: ", fileInfo.Size())
+		count++
+	}
+
 	return fileClips
+}
+
+/*
+client call master to start schedule tasks
+*/
+func callMapleJuice() {
+
 }
 
 // define server interface
@@ -28,16 +88,14 @@ type Server struct {
 
 // features to describe maple/juice task
 type Task struct {
-	TaskNum   int
-	FileName  string
-	FilePath  string
-	FileStart int
-	FileEnd   int
-	Status    string
-	TaskType  string // "maple"/"juice"
-	ServerIp  string // server in charge of this task
-	SourceIp  string // server has that file
-	LastTime  *timestamppb.Timestamp
+	TaskNum  int
+	FileName string
+	FilePath string
+	Status   string
+	TaskType string // "maple"/"juice"
+	ServerIp string // server in charge of this task
+	SourceIp string // server has that file
+	LastTime *timestamppb.Timestamp
 }
 
 /*
@@ -71,12 +129,10 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		return nil
 	}
 
-	sdfsFile, err := os.Open(args.FileName) // TODO：is this filename same as local_filePath??
+	fileClip, err := os.Open(args.FileName) // TODO：is this filename same as local_filePath??
 	net_node.CheckError(err)
-	defer sdfsFile.Close()
+	defer fileClip.Close()
 	// execute maple_exe
-
-	// reply to master
 
 	// how to deal with maple_local_file??
 	return nil
@@ -85,13 +141,13 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 /*
 Server start listening RPC call
 */
-func StartRPC(mapleServer *Server) {
+func StartServerRPC(mapleServer *Server) {
 	rpc.Register(mapleServer)
-	listener, _ := net.Listen("tcp", "1234")
+	listener, _ := net.Listen("tcp", RPCPORT)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("error...")
+			fmt.Println("Can't start tcp connection")
 		}
 		go rpc.ServeConn(conn)
 	}
