@@ -1,0 +1,16 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+)
+
+func main() {
+	input := bufio.NewScanner(os.Stdin)
+	input.Split(bufio.ScanWords)
+	for input.Scan() {
+		fmt.Println(input.Text() + "\t1")
+		//might have an extra line
+	}
+}
