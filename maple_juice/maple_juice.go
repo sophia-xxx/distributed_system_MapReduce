@@ -178,6 +178,10 @@ func JuiceTask(fileList []string) {
 }
 
 /********Master Function*********/
+// define master interface
+type Master struct {
+	NodeInfo *net_node.Node
+}
 
 // master keep record of all maple/reduce tasks
 var taskMap map[string]Task
@@ -186,6 +190,13 @@ var taskMap map[string]Task
 Master init all variables
 */
 func init() {
+
+}
+
+/*
+master rpc method to start MapleJuice
+*/
+func (master *Master) startMapleJuice() {
 
 }
 
@@ -201,14 +212,14 @@ func schedule(fileClips []string) {
 Master shuffle keys to generate N juice tasks
 */
 func shuffle() {
-	client, _ := rpc.Dial("tcp", address)
+	/*client, _ := rpc.Dial("tcp", address)
 	args := &Task{}
 	mapleResults := make([]string, 9)
 	callServer := client.Go("MJServer.MapleTask", args, mapleResults, nil)
 	replyCall := <-callServer.Done
 	if replyCall.Error != nil {
 
-	}
+	}*/
 
 }
 
