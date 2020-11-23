@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"hash/fnv"
 	"log"
 	"mp3/file_system"
 	"mp3/net_node"
@@ -256,7 +257,9 @@ func JuiceTask(fileList []string) {
 /**************************Master Function****************************/
 // define master interface
 type Master struct {
-	NodeInfo *net_node.Node
+	NodeInfo    *net_node.Node
+	FileTaskMap map[string]string // file->Task
+	TaskMap     map[string]Task   // file->serverIp
 }
 
 // define master rpc para
@@ -270,14 +273,15 @@ type MJReq struct {
 }
 
 // master keep record of all maple/reduce tasks
-var taskMap map[string]Task
 
 /*
 Master init all variables
 */
 func (master *Master) NewMaster(n *net_node.Node) *Master {
 	newMaster := &Master{
-		NodeInfo: n,
+		NodeInfo:    n,
+		FileTaskMap: make(map[string]string),
+		TaskMap:     make(map[string]Task),
 	}
 	return newMaster
 }
@@ -299,8 +303,21 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		fmt.Println("There is no available servers!")
 		return nil
 	}
+	fileClips := mjreq.FileClip
 	// schedule the maple tasks
+	for i, server := range servers {
+		// hash server Ip and get the index of fileClips
+		index := int(Hash(server)) % len(servers)
+		// whether the file is already allocated
+		if _, ok := master.FileTaskMap[fileClips[index]]; ok {
 
+		}
+		master.FileTaskMap[fileClips[index]] = server
+
+		task := &Task{
+			TaskNum: i,
+		}
+	}
 	// asynchronize call server RPC function
 
 	//
@@ -394,4 +411,9 @@ func changeIPtoString(ip []byte) string {
 	}
 	res := strings.Join(IPString, ".")
 	return res
+}
+func Hash(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
 }
