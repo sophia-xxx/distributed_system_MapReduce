@@ -1,4 +1,4 @@
-package maple_juice
+package main
 
 import (
 	"bufio"
@@ -21,47 +21,42 @@ const (
 	FILEPREFIX  = "sdfs_intermediate_file_prefix_"
 	RPCPORT     = "1234"
 	GETFILEWAIT = 4 * time.Second
+	MASTERIP    = "172.22.94.48"
 )
 
 var TimeFormat = "2006-01-02 15:04:05"
 
-/*
-client split the whole sdfs_src_file and generate file clips
-*/
-func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileName string) map[int]string {
-	fmt.Println(">>Start clipping files")
-	fileClips := make(map[int]string, mapleNum)
-	// get sdfs_src_file
-	go file_system.GetFile(n, sdfsFileName, localFileName)
-	time.Sleep(GETFILEWAIT)
-	// check if we get the file
-	if !WhetherFileExist(localFileName) {
-		fmt.Println("Can't get the file:  " + sdfsFileName + ". Check the Internet!")
-		return nil
-	}
+/*************************For client start maple and juice****************************/
+
+// filepath is "./filename"
+func split(fileName string, clipNum int) map[int]string {
+	fileClips := make(map[int]string, clipNum)
 	// read lines of file
-	file, _ := os.Open(localFileName)
+	file, _ := os.Open("./" + fileName)
 	defer file.Close()
 	fileScanner := bufio.NewScanner(file)
 	lineCount := 0
 	for fileScanner.Scan() {
 		lineCount++
 	}
-	fmt.Println("File has " + strconv.Itoa(lineCount) + " lines.")
+	fmt.Println("File has " + strconv.Itoa(lineCount) + " lines!!!")
+
 	// split file into file clips, then generate list of fileNames
-	splitLines := lineCount/mapleNum + 1
+	splitLines := lineCount/clipNum + 1
+	// re-open the file
+	file, _ = os.Open("./" + fileName)
 	fileScanner = bufio.NewScanner(file)
 	// determine whether the file is end
 	endScan := false
+	count := 0
 	for fileScanner.Scan() {
-		count := 0
 		var fileSplit *os.File
 		// create new files for different file clips
-		fileSplit, _ = os.Create(CLIPPREFIX + strconv.Itoa(count))
+		fileSplit, _ = os.Create("./" + CLIPPREFIX + strconv.Itoa(count))
 		defer fileSplit.Close()
 		for i := 0; i < splitLines-1; i++ {
 			line := fileScanner.Text()
-			fileSplit.WriteString(line)
+			fileSplit.WriteString(line + "\n")
 			if !fileScanner.Scan() {
 				endScan = true
 				break
@@ -72,13 +67,32 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 		}
 		// last line
 		line := fileScanner.Text()
-		fileSplit.WriteString(line)
+		fileSplit.WriteString(line + "\n")
 		// check whether this write successfully
 		fileInfo, _ := fileSplit.Stat()
-		fileClips[count] = CLIPPREFIX + strconv.Itoa(count)
+		//fileClips[count] = CLIPPREFIX + strconv.Itoa(count)
 		fmt.Println("File clip: ", fileInfo.Size())
 		count++
 	}
+	//return fileClips
+	return fileClips
+}
+
+/*
+client split the whole sdfs_src_file and generate file clips
+*/
+func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileName string) map[int]string {
+	fileClips := make(map[int]string, mapleNum)
+	// get sdfs_src_file
+	go file_system.GetFile(n, sdfsFileName, localFileName)
+	time.Sleep(GETFILEWAIT)
+	// check if we get the file
+	if !WhetherFileExist(localFileName) {
+		fmt.Println("Can't get the file:  " + sdfsFileName + ". Check the Internet!")
+		return nil
+	}
+	fmt.Println(">>Start clipping files")
+	fileClips = split(localFileName, mapleNum)
 	fmt.Println(">>Finish clipping files")
 	return fileClips
 }
@@ -86,7 +100,27 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 /*
 client call master to start schedule tasks
 */
-func callMapleJuice() {
+// maple maple_exe num_maple sdfs_intermediate sdfs_src
+func callMapleJuice(n *net_node.Node, workType string, mapleExe string, mapleNum int, sdfsSrcFile string) {
+	// set connection with master RPC
+	var reply bool
+	files := splitFile(n, mapleNum, sdfsSrcFile, sdfsSrcFile)
+	client, err := rpc.Dial("tcp", MASTERIP+":"+RPCPORT)
+	if err != nil {
+		fmt.Println("Can't set connection with remote process!")
+		return
+	}
+	// call master RPC
+	args := &MJReq{
+		WorkType: workType,
+		MapleExe: mapleExe,
+		MapleNum: mapleNum,
+		FileClip: files,
+		SenderIp: n.Address.IP,
+	}
+	if err := client.Call("Master.StartMapleJuice", args, &reply); err != nil {
+		fmt.Println("Can't start MapleJuice!")
+	}
 
 }
 
@@ -107,6 +141,7 @@ type Task struct {
 	LastTime      *timestamppb.Timestamp
 }
 
+/*****************************For server RPC********************************/
 /*
 init sever
 */
@@ -192,11 +227,12 @@ Server start listening RPC call
 */
 func StartServerRPC(mapleServer *Server) {
 	rpc.Register(mapleServer)
-	listener, _ := net.Listen("tcp", RPCPORT)
+	listener, _ := net.Listen("tcp", ":"+RPCPORT)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Can't start tcp connection")
+			fmt.Println("Can't start tcp connection at rpc port in server")
+			return
 		}
 		go rpc.ServeConn(conn)
 	}
@@ -208,21 +244,24 @@ Server run juice task on file clip
 func JuiceTask(fileList []string) {
 	// loop fileList
 	// read intermediate sdfs file
-
 	// execute juice_exe
-
 	// append results in localFile
-
-	// reply to master
-
 	// append results in sdfs_result_file, same as "put" command
-
 }
 
-/********Master Function*********/
+/**************************Master Function****************************/
 // define master interface
 type Master struct {
 	NodeInfo *net_node.Node
+}
+
+// define master rpc para
+type MJReq struct {
+	WorkType string
+	MapleExe string
+	MapleNum int
+	FileClip map[int]string
+	SenderIp net.IP
 }
 
 // master keep record of all maple/reduce tasks
@@ -231,22 +270,53 @@ var taskMap map[string]Task
 /*
 Master init all variables
 */
-func init() {
-
+func (master *Master) NewMaster(n *net_node.Node) *Master {
+	newMaster := &Master{
+		NodeInfo: n,
+	}
+	return newMaster
 }
 
 /*
 master rpc method to start MapleJuice
 */
-func (master *Master) startMapleJuice() {
+func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 
+	return nil
+}
+
+/*
+master start listening RPC call
+*/
+func StartMasterRpc(master *Master) {
+	rpc.Register(master)
+	listener, _ := net.Listen("tcp", ":"+RPCPORT)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Can't start tcp connection at rpc port in master")
+			return
+		}
+		go rpc.ServeConn(conn)
+	}
 }
 
 /*
 Master schedule maple/juice tasks
 */
-func schedule(fileClips []string) {
-	// allocate tasks to servers and update TaskMap
+func schedule(fileClips map[int]string) {
+	// allocate tasks to servers
+
+	// call their RPC methods
+	/*client, _ := rpc.Dial("tcp", address)
+	args := &Task{}
+	mapleResults := make([]string, 9)
+	callServer := client.Go("MJServer.MapleTask", args, mapleResults, nil)
+	replyCall := <-callServer.Done
+	if replyCall.Error != nil {
+	}*/
+
+	//update TaskMap
 
 }
 
@@ -254,14 +324,6 @@ func schedule(fileClips []string) {
 Master shuffle keys to generate N juice tasks
 */
 func shuffle() {
-	/*client, _ := rpc.Dial("tcp", address)
-	args := &Task{}
-	mapleResults := make([]string, 9)
-	callServer := client.Go("MJServer.MapleTask", args, mapleResults, nil)
-	replyCall := <-callServer.Done
-	if replyCall.Error != nil {
-
-	}*/
 
 }
 
