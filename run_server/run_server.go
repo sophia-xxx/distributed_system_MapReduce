@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"mp3/maple_juice"
 	"net"
 	"os"
 	"strconv"
@@ -294,10 +295,19 @@ func execute_store_command(node *net_node.Node, args []string, node_active bool)
 	}
 }
 
+// maple <maple_exe> <mapleNum> <sdfs_prefix> <sdfs_src_file>
+func excute_maple_command(node *net_node.Node, args []string, server *maple_juice.Server, master *maple_juice.Master) {
+	initMapleJuice(server, master, node)
+	mapleNum, _ := strconv.Atoi(args[2])
+	maple_juice.CallMaple(node, args[0], args[1], mapleNum, args[4])
+}
+
 func CLI() {
 	reader := bufio.NewReader(os.Stdin)
 
 	var node *net_node.Node
+	var server *maple_juice.Server
+	var master *maple_juice.Master
 
 	for {
 		fmt.Print("-> ")
@@ -365,9 +375,23 @@ func CLI() {
 		case strings.Compare(args[0], "exit") == 0:
 			os.Exit(0)
 
+		// MapleJuice
+		case strings.Compare(args[0], "maple") == 0:
+			excute_maple_command(node, args, server, master)
+
 		// Invalid command
 		default:
 			printCLIHelp()
 		}
+	}
+}
+
+func initMapleJuice(server *maple_juice.Server, master *maple_juice.Master, node *net_node.Node) {
+	server = maple_juice.NewMapleServer(node)
+	master = maple_juice.NewMaster(node)
+	if strings.Compare(maple_juice.ChangeIPtoString(node.Address.IP), maple_juice.MASTERIP) == 0 {
+		go maple_juice.StartMasterRpc(master)
+	} else {
+		go maple_juice.StartServerRPC(server)
 	}
 }

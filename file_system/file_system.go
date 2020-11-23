@@ -75,7 +75,7 @@ func MergeFileList(n *net_node.Node, msg *pings.TableMessasgeProto) {
  * File send Protocol:
  * P_[file_size][filename][file_data]
  */
-func send_file_tcp(n *net_node.Node, server_index int32, local_filepath string, filename string, file_size int64) {
+func Send_file_tcp(n *net_node.Node, server_index int32, local_filepath string, filename string, file_size int64) {
 	// Open a TCP connection
 	remote_addr := net_node.ConvertToAddr(n.Table[server_index].Address)
 	remote_tcp_addr := net_node.ConvertUDPToTCP(*remote_addr)
@@ -165,7 +165,7 @@ func send_file_to_servers(n *net_node.Node, file_server_indices []int32, local_f
 		} else if uint32(server_index) == n.Index {
 			write_file_locally(local_filepath, filename)
 		} else {
-			send_file_tcp(n, server_index, local_filepath, filename, file_size)
+			Send_file_tcp(n, server_index, local_filepath, filename, file_size)
 		}
 	}
 }
@@ -529,7 +529,7 @@ func SendFile(n *net_node.Node, connection net.Conn) {
 	}
 	file_size := f.Size()
 
-	send_file_tcp(n, server_index, local_filepath, filename, file_size)
+	Send_file_tcp(n, server_index, local_filepath, filename, file_size)
 }
 
 func in_server_list(n *net_node.Node, servers []int32) bool {
@@ -586,7 +586,7 @@ func DuplicateFile(n *net_node.Node, filename string, send_to_idx int32) {
 
 	acquire_distributed_write_lock(n, filename)
 
-	send_file_tcp(n, send_to_idx, filename, filename, file_size)
+	Send_file_tcp(n, send_to_idx, filename, filename, file_size)
 
 	// Send a message to the remaining servers that the file has been put
 	servers := n.Files[filename].Servers

@@ -1,4 +1,4 @@
-package main
+package maple_juice
 
 import (
 	"bufio"
@@ -85,6 +85,7 @@ client split the whole sdfs_src_file and generate file clips
 func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileName string) map[int]string {
 	fileClips := make(map[int]string, mapleNum)
 	// get sdfs_src_file
+	//todo: should we put these file clips as sdfsFile or we just want to transfer file between nodes? We can't get file like this
 	go file_system.GetFile(n, sdfsFileName, localFileName)
 	time.Sleep(GETFILEWAIT)
 	// check if we get the file
@@ -96,6 +97,7 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 	fileClips = split(localFileName, mapleNum)
 	fmt.Println(">>Finish clipping files")
 	return fileClips
+
 }
 
 /*
@@ -125,7 +127,9 @@ func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int,
 	}
 	if err := client.Call("Master.StartMapleJuice", args, &reply); err != nil {
 		fmt.Println("Can't start MapleJuice!")
+		return
 	}
+	fmt.Println(getTimeString() + " Start Maple!")
 
 }
 
@@ -145,12 +149,13 @@ type Task struct {
 	ServerIp      string // server in charge of this task
 	SourceIp      string // server has that file
 	LastTime      *timestamppb.Timestamp
+	//NodeInfo   *net_node.Node
 }
 
 /*
 init sever
 */
-func (mapleServer *Server) newMapleServer(n *net_node.Node) *Server {
+func NewMapleServer(n *net_node.Node) *Server {
 	server := &Server{
 		NodeInfo: n,
 	}
@@ -161,7 +166,7 @@ func (mapleServer *Server) newMapleServer(n *net_node.Node) *Server {
 Server run maple task on file clip
 */
 //fileName string, fileStart int, fileEnd int
-func (mapleServer *Server) MapleTask(n *net_node.Node, args Task, replyKeyList *[]string) error {
+func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// read file clip, same as "get" command
 	// var fileReq = make(chan bool)
 	node := mapleServer.NodeInfo
@@ -183,7 +188,7 @@ func (mapleServer *Server) MapleTask(n *net_node.Node, args Task, replyKeyList 
 	net_node.CheckError(err)
 	defer fileClip.Close()
 	// execute maple_exe
-
+	// todo: the problem of executing command in Go
 	// how to deal with maple_local_file??
 	// get a "result" file after the maple_exe finished
 	// scan the "result" file by line to map and using this map to output file
@@ -226,9 +231,10 @@ func (mapleServer *Server) MapleTask(n *net_node.Node, args Task, replyKeyList 
 
 	for key := range of_map {
 		local_file_path := FILEPREFIX + key
-		f, err := os.Stat(local_file_path)
-		inter_target_index := hash_string_to_int(key)
-		send_file_tcp(n, inter_target_index, local_file_path, local_file_path, f.Size())
+		f, _ := os.Stat(local_file_path)
+		inter_target_index := hash_string_to_int(node, key)
+
+		file_system.Send_file_tcp(node, int32(inter_target_index), local_file_path, local_file_path, f.Size()) //Todo: check the sendfile function
 		// Is filepath = filename here? Is it sending multiple files here? will they wait others?
 	}
 	return nil
@@ -265,8 +271,9 @@ func JuiceTask(fileList []string) {
 // define master interface
 type Master struct {
 	NodeInfo    *net_node.Node
-	FileTaskMap map[string]string // file->Task
-	TaskMap     map[string]Task   // file->serverIp
+	FileTaskMap map[string]string // file->serverIp
+	TaskMap     map[string]Task   // file->Task
+	keyList     []string
 }
 
 // define master rpc para
@@ -284,11 +291,12 @@ type MJReq struct {
 /*
 Master init all variables
 */
-func (master *Master) NewMaster(n *net_node.Node) *Master {
+func NewMaster(n *net_node.Node) *Master {
 	newMaster := &Master{
 		NodeInfo:    n,
 		FileTaskMap: make(map[string]string),
 		TaskMap:     make(map[string]Task),
+		keyList:     make([]string, 10),
 	}
 	return newMaster
 }
@@ -301,7 +309,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	members := mjreq.NodeInfo.Table
 	servers := make([]string, 10)
 	for _, member := range members {
-		IPString := changeIPtoString(member.Address.Ip)
+		IPString := ChangeIPtoString(member.Address.Ip)
 		if strings.Compare(IPString, MASTERIP) != 0 {
 			servers = append(servers, IPString)
 		}
@@ -313,21 +321,49 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	fileClips := mjreq.FileClip
 	// schedule the maple tasks
 	for i, server := range servers {
-		// hash server Ip and get the index of fileClips
-		index := int(Hash(server)) % len(servers)
-		// whether the file is already allocated
-		if _, ok := master.FileTaskMap[fileClips[index]]; ok {
-
+		var index int
+		var collision = 1
+		for {
+			// hash server Ip and get the index of fileClips
+			index = int(Hash(server+strconv.Itoa(collision))) % len(servers)
+			// when the file is already allocated
+			_, ok := master.FileTaskMap[fileClips[index]]
+			if !ok {
+				break
+			}
+			collision++
 		}
+
 		master.FileTaskMap[fileClips[index]] = server
-
+		// generate the task
 		task := &Task{
-			TaskNum: i,
+			TaskNum:       i,
+			SdfsFileName:  master.FileTaskMap[fileClips[index]],
+			LocalFileName: master.FileTaskMap[fileClips[index]],
+			Status:        "Allocated",
+			TaskType:      "Maple",
+			ServerIp:      server,
+			SourceIp:      ChangeIPtoString(mjreq.SenderIp),
+			LastTime:      timestamppb.Now(),
 		}
-	}
-	// asynchronize call server RPC function
+		// call server's RPC methods
+		client, err := rpc.Dial("tcp", task.SourceIp+":"+RPCPORT)
+		if err != nil {
+			fmt.Println("Can't dial server RPC")
+			return nil
+		}
+		mapleResults := make([]string, 10)
+		// TODO: Better to use asynchronous call here- client.Go()
+		err = client.Call("MJServer.MapleTask", task, &mapleResults)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		master.keyList = append(master.keyList, mapleResults...)
 
-	//
+	}
+	fmt.Println(getTimeString() + " Finish Maple!")
+
 	*reply = true
 	return nil
 }
@@ -349,35 +385,9 @@ func StartMasterRpc(master *Master) {
 }
 
 /*
-Master schedule maple/juice tasks
-*/
-func schedule(fileClips map[int]string) {
-	// allocate tasks to servers
-
-	// call their RPC methods
-	/*client, _ := rpc.Dial("tcp", address)
-	args := &Task{}
-	mapleResults := make([]string, 9)
-	callServer := client.Go("MJServer.MapleTask", args, mapleResults, nil)
-	replyCall := <-callServer.Done
-	if replyCall.Error != nil {
-	}*/
-
-	//update TaskMap
-
-}
-
-/*
 Master shuffle keys to generate N juice tasks
 */
 func shuffle() {
-
-}
-
-/*
-Master tracking progress/completion of tasks
-*/
-func updateTaskMap() {
 
 }
 
@@ -398,7 +408,9 @@ func cleanAllFiles() {
 
 }
 
-/*****Utils*****/
+/*****************Utils*****************************/
+
+// determine whether a file exist in local file directory
 func WhetherFileExist(filepath string) bool {
 	info, err := os.Stat(filepath)
 	if os.IsNotExist(err) {
@@ -407,11 +419,13 @@ func WhetherFileExist(filepath string) bool {
 	return !info.IsDir()
 }
 
+// get the string format of current time
 func getTimeString() string {
 	return "(" + strings.Split(time.Now().Format(TimeFormat), " ")[1] + ")"
 }
 
-func changeIPtoString(ip []byte) string {
+// change net.IP ([]byte) into string
+func ChangeIPtoString(ip []byte) string {
 	var IPString []string
 	for _, i := range ip {
 		IPString = append(IPString, strconv.Itoa(int(i)))
@@ -419,6 +433,8 @@ func changeIPtoString(ip []byte) string {
 	res := strings.Join(IPString, ".")
 	return res
 }
+
+// Hash a string into int
 func Hash(s string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(s))
@@ -428,10 +444,10 @@ func Hash(s string) uint32 {
 /*
 Hash a key string into a int
 */
-func hash_string_to_int(n *net_node.Node, key string) int{
+func hash_string_to_int(n *net_node.Node, key string) int {
 	h := fnv.New32a()
 	h.Write([]byte(key))
 	val := h.Sum32()
-	alive_server_size := len(n.table)
-	return val % alive_server_size  //Is uint32 % int get a int validly?
+	alive_server_size := len(n.Table)
+	return int(val) % alive_server_size
 }
