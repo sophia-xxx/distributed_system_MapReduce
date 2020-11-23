@@ -98,10 +98,13 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 }
 
 /*
-client call master to start schedule tasks
+client start MapleJuice
 */
+// client deal with maple phase command:
 // maple maple_exe num_maple sdfs_intermediate sdfs_src
-func callMapleJuice(n *net_node.Node, workType string, mapleExe string, mapleNum int, sdfsSrcFile string) {
+// and call master to start schedule tasks
+
+func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int, sdfsSrcFile string) {
 	// set connection with master RPC
 	var reply bool
 	files := splitFile(n, mapleNum, sdfsSrcFile, sdfsSrcFile)
@@ -117,6 +120,7 @@ func callMapleJuice(n *net_node.Node, workType string, mapleExe string, mapleNum
 		MapleNum: mapleNum,
 		FileClip: files,
 		SenderIp: n.Address.IP,
+		NodeInfo: n,
 	}
 	if err := client.Call("Master.StartMapleJuice", args, &reply); err != nil {
 		fmt.Println("Can't start MapleJuice!")
@@ -124,6 +128,7 @@ func callMapleJuice(n *net_node.Node, workType string, mapleExe string, mapleNum
 
 }
 
+/*****************************For server RPC********************************/
 // define server interface
 type Server struct {
 	NodeInfo *net_node.Node
@@ -141,7 +146,6 @@ type Task struct {
 	LastTime      *timestamppb.Timestamp
 }
 
-/*****************************For server RPC********************************/
 /*
 init sever
 */
@@ -262,6 +266,7 @@ type MJReq struct {
 	MapleNum int
 	FileClip map[int]string
 	SenderIp net.IP
+	NodeInfo *net_node.Node
 }
 
 // master keep record of all maple/reduce tasks
@@ -281,7 +286,25 @@ func (master *Master) NewMaster(n *net_node.Node) *Master {
 master rpc method to start MapleJuice
 */
 func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
+	// get all potential servers
+	members := mjreq.NodeInfo.Table
+	servers := make([]string, 10)
+	for _, member := range members {
+		IPString := changeIPtoString(member.Address.Ip)
+		if strings.Compare(IPString, MASTERIP) != 0 {
+			servers = append(servers, IPString)
+		}
+	}
+	if len(servers) == 0 {
+		fmt.Println("There is no available servers!")
+		return nil
+	}
+	// schedule the maple tasks
 
+	// asynchronize call server RPC function
+
+	//
+	*reply = true
 	return nil
 }
 
@@ -339,9 +362,7 @@ Master re-allocate tasks in failed servers
 */
 func HandleFailure(n *net_node.Node, failed_index int) {
 	// find failed server
-
 	// get the task of failed server
-
 	// add task into taskChannel
 
 }
@@ -364,4 +385,13 @@ func WhetherFileExist(filepath string) bool {
 
 func getTimeString() string {
 	return "(" + strings.Split(time.Now().Format(TimeFormat), " ")[1] + ")"
+}
+
+func changeIPtoString(ip []byte) string {
+	var IPString []string
+	for _, i := range ip {
+		IPString = append(IPString, strconv.Itoa(int(i)))
+	}
+	res := strings.Join(IPString, ".")
+	return res
 }
