@@ -161,7 +161,7 @@ func (mapleServer *Server) newMapleServer(n *net_node.Node) *Server {
 Server run maple task on file clip
 */
 //fileName string, fileStart int, fileEnd int
-func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
+func (mapleServer *Server) MapleTask(n *net_node.Node, args Task, replyKeyList *[]string) error {
 	// read file clip, same as "get" command
 	// var fileReq = make(chan bool)
 	node := mapleServer.NodeInfo
@@ -224,6 +224,13 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		of_map[key].Close()
 	}
 
+	for key := range of_map {
+		local_file_path := FILEPREFIX + key
+		f, err := os.Stat(local_file_path)
+		inter_target_index := hash_string_to_int(key)
+		send_file_tcp(n, inter_target_index, local_file_path, local_file_path, f.Size())
+		// Is filepath = filename here? Is it sending multiple files here? will they wait others?
+	}
 	return nil
 }
 
@@ -416,4 +423,15 @@ func Hash(s string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(s))
 	return h.Sum32()
+}
+
+/*
+Hash a key string into a int
+*/
+func hash_string_to_int(n *net_node.Node, key string) int{
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	val := h.Sum32()
+	alive_server_size := len(n.table)
+	return val % alive_server_size  //Is uint32 % int get a int validly?
 }
