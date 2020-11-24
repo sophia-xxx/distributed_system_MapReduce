@@ -1,19 +1,30 @@
 package file_system
 
 import (
+	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	//"mp3/maple_jucie"
+
 	"mp3/net_node"
 	pings "mp3/ping_protobuff"
+
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+const (
+	FILEPREFIX = "sdfs_intermediate_file_prefix_"
+)
+
+var of_map map[string]*os.File
 
 /*
  * Implementation of the ls command
@@ -495,6 +506,10 @@ func ReceiveFile(connection net.Conn) {
 	}
 	data := buff[:num_bytes_read]
 	new_file.Write(data)
+	file_name_prefix := filename[0:len(FILEPREFIX)]
+	if file_name_prefix == FILEPREFIX {
+		CreatAppendSdfsKeyFile(filename)
+	}
 
 	// Now, write the rest of the file
 	io.Copy(new_file, connection)
@@ -852,4 +867,42 @@ func GetFileWithIndex(n *net_node.Node, filename string, local_filepath string, 
 	filename_str := fmt.Sprintf("%100s", local_filepath)
 	first_line := []byte("G_" + index_str + file_path_str + filename_str)
 	conn.Write(first_line)
+}
+
+// After Receiving a sdfs_intermediate_file, do the append
+func CreatAppendSdfsKeyFile(filename string) {
+	for i = len(filename) - 1; i >= 0; i++ {
+		if filename[i] == '_' {
+			target_sdfs_filename := filename[0:i]
+			break
+		}
+	}
+	_, err := os.Stat(target_sdfs_filename)
+	if os.IsNotExist(err) {
+		f, err := os.Create(target_sdfs_filename)
+		of_map[target_sdfs_filename] = f
+	} else {
+		f, err := os.Open(target_sdfs_filename)
+		of_map[target_sdfs_filename] = f
+	}
+	f := of_map[target_sdfs_filename]
+
+	ifstream, err := os.Open(filename)
+	if err != nil {
+		fmt.Println("Can not open the MapleTask input file!")
+	}
+	input := bufio.NewScanner(ifstream)
+	for {
+		if !input.Scan() {
+			break
+		}
+		line := input.Text()
+		_, err := f.WriteString(line + "\n")
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+	}
+	defer f.Close()
+	return nil
 }
