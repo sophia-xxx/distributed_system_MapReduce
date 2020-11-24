@@ -1,7 +1,7 @@
 package main
 
 import (
-	"os"
+	"fmt"
 	"os/exec"
 )
 
@@ -32,18 +32,8 @@ import (
 //}
 
 func main() {
-	infile := "maple_wordcount_test1"
-	exename := "./mapleJuice_exe/wordcount_maple.exe"
-	//cmd := exename + "<" + infile
-	// + ">" + outfile
-	cmd := exec.Command(exename, infile)
-	ret, _ := cmd.CombinedOutput()
-	outputFile := "./test1"
-	file, _ := os.Create(outputFile)
-	file.WriteString(string(ret))
-	//byte, err := res.Output()
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-	//fmt.Println(string(byte))
+	_, err := exec.Command("/bin/sh", "-c", "maple_vote < maple_vote_test1 >result").Output()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
 }
