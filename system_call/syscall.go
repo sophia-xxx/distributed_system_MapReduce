@@ -32,7 +32,7 @@ import (
 //}
 
 func main() {
-	out, err := exec.Command("/bin/sh", "-c", "ls").Output()
+	out, err := exec.Command("/bin/sh", "-c", "ls>lsout").Output()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}
