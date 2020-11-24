@@ -5,23 +5,18 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mp3/config"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	//"mp3/maple_jucie"
-
 	"mp3/net_node"
 	pings "mp3/ping_protobuff"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-)
-
-const (
-	FILEPREFIX = "sdfs_intermediate_file_prefix_"
 )
 
 var of_map map[string]*os.File
@@ -506,8 +501,8 @@ func ReceiveFile(connection net.Conn) {
 	}
 	data := buff[:num_bytes_read]
 	new_file.Write(data)
-	file_name_prefix := filename[0:len(FILEPREFIX)]
-	if file_name_prefix == FILEPREFIX {
+	file_name_prefix := filename[0:len(config.FILEPREFIX)]
+	if file_name_prefix == config.FILEPREFIX {
 		CreatAppendSdfsKeyFile(filename)
 	}
 
@@ -871,9 +866,10 @@ func GetFileWithIndex(n *net_node.Node, filename string, local_filepath string, 
 
 // After Receiving a sdfs_intermediate_file, do the append
 func CreatAppendSdfsKeyFile(filename string) {
-	for i = len(filename) - 1; i >= 0; i++ {
+	var target_sdfs_filename string
+	for i := len(filename) - 1; i >= 0; i++ {
 		if filename[i] == '_' {
-			target_sdfs_filename := filename[0:i]
+			target_sdfs_filename = filename[0:i]
 			break
 		}
 	}
@@ -900,9 +896,9 @@ func CreatAppendSdfsKeyFile(filename string) {
 		_, err := f.WriteString(line + "\n")
 		if err != nil {
 			log.Println(err)
-			return nil
+			return
 		}
 	}
 	defer f.Close()
-	return nil
+	return
 }

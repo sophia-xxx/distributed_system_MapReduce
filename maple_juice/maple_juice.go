@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"log"
+	"mp3/config"
 	"mp3/file_system"
 	"mp3/net_node"
 	"net"
@@ -17,14 +18,6 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
-)
-
-const (
-	CLIPPREFIX  = "sdfs_src_file_clip_"
-	FILEPREFIX  = "sdfs_intermediate_file_prefix_"
-	RPCPORT     = "1234"
-	GETFILEWAIT = 4 * time.Second
-	MASTERIP    = "172.22.94.48"
 )
 
 var TimeFormat = "2006-01-02 15:04:05"
@@ -55,7 +48,7 @@ func split(fileName string, clipNum int) map[int]string {
 	for fileScanner.Scan() {
 		var fileSplit *os.File
 		// create new files for different file clips
-		fileSplit, _ = os.Create("./" + CLIPPREFIX + strconv.Itoa(count))
+		fileSplit, _ = os.Create("./" + config.CLIPPREFIX + strconv.Itoa(count))
 		defer fileSplit.Close()
 		for i := 0; i < splitLines-1; i++ {
 			line := fileScanner.Text()
@@ -89,7 +82,7 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 	// get sdfs_src_file
 
 	go file_system.GetFile(n, sdfsFileName, localFileName)
-	time.Sleep(GETFILEWAIT)
+	time.Sleep(config.GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(localFileName) {
 		fmt.Println("Can't get the file:  " + sdfsFileName + ". Check the Internet!")
@@ -113,7 +106,7 @@ func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int,
 	// set connection with master RPC
 	var reply bool
 	files := splitFile(n, mapleNum, sdfsSrcFile, sdfsSrcFile)
-	client, err := rpc.Dial("tcp", MASTERIP+":"+RPCPORT)
+	client, err := rpc.Dial("tcp", config.MASTERIP+":"+config.RPCPORT)
 	if err != nil {
 		fmt.Println("Can't set connection with remote process!")
 		return
@@ -206,7 +199,7 @@ func splitMapleResultFile(resultFileName string, taskID int, of_map map[string]*
 		key := str[0]
 		f, ok := of_map[key]
 		if !ok {
-			append_file_name := FILEPREFIX + key + "_" + strconv.Itoa(taskID)
+			append_file_name := config.FILEPREFIX + key + "_" + strconv.Itoa(taskID)
 			//f, err := os.OpenFile(append_file_name, os.O_RDONLY|os.O_CREATE|os.O_APPEND, 0666)
 			f, err := os.Create(append_file_name)
 			if err != nil {
@@ -241,7 +234,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		return nil
 	}
 	go getFileClip(node, args.RemoteFileName, args.LocalFileName, index)
-	time.Sleep(GETFILEWAIT)
+	time.Sleep(config.GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(args.LocalFileName) {
 		fmt.Println("Can't get the file:  " + args.RemoteFileName + ". Check the Internet!")
@@ -264,7 +257,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	}
 	// send file to target node to merge
 	for key := range keyFileMap {
-		local_file_path := FILEPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
+		local_file_path := config.FILEPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
 		f, _ := os.Stat(local_file_path)
 		// find the target node to merge and store the sdfs_prefix_key file
 		targetIndex := determineIndex(node, key)
@@ -294,7 +287,7 @@ Server start listening RPC call
 */
 func StartServerRPC(mapleServer *Server) {
 	rpc.Register(mapleServer)
-	listener, _ := net.Listen("tcp", ":"+RPCPORT)
+	listener, _ := net.Listen("tcp", ":"+config.RPCPORT)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -359,7 +352,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	servers := make([]string, 10)
 	for _, member := range members {
 		IPString := ChangeIPtoString(member.Address.Ip)
-		if strings.Compare(IPString, MASTERIP) != 0 {
+		if strings.Compare(IPString, config.MASTERIP) != 0 {
 			servers = append(servers, IPString)
 		}
 	}
@@ -397,7 +390,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			ExecName:       mjreq.MapleExe,
 		}
 		// call server's RPC methods
-		client, err := rpc.Dial("tcp", task.ServerIp+":"+RPCPORT)
+		client, err := rpc.Dial("tcp", task.ServerIp+":"+config.RPCPORT)
 		if err != nil {
 			fmt.Println("Can't dial server RPC")
 			return nil
@@ -424,7 +417,7 @@ master start listening RPC call
 */
 func StartMasterRpc(master *Master) {
 	rpc.Register(master)
-	listener, _ := net.Listen("tcp", ":"+RPCPORT)
+	listener, _ := net.Listen("tcp", ":"+config.RPCPORT)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -522,7 +515,7 @@ func determineIndex(node *net_node.Node, key string) int {
 	var members = make([]string, 10)
 	var finalIndex = -1
 	for _, node := range node.Table {
-		if strings.Compare(ChangeIPtoString(node.Address.Ip), MASTERIP) == 0 {
+		if strings.Compare(ChangeIPtoString(node.Address.Ip), config.MASTERIP) == 0 {
 			continue
 		}
 		ip := ChangeIPtoString(node.Address.Ip)
