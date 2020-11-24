@@ -32,11 +32,8 @@ import (
 //}
 
 func main() {
-	out, err := exec.Command("/bin/sh", "-c", "ls>lsout").Output()
+	_, err := exec.Command("/bin/sh", "-c", "maple_vote < maple_vote_test1 >result").Output()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}
-
-	output := string(out[:])
-	fmt.Println(output)
 }
