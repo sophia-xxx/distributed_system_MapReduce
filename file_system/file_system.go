@@ -159,7 +159,7 @@ func send_file_to_servers(n *net_node.Node, file_server_indices []int32, local_f
 
 		// If the index is negative, skip the iteration
 		// If the server index is the index of the current server, just write  the file locally
-		// Otherwise, send the file to the appropriate aerver
+		// Otherwise, send the file to the appropriate server
 		if server_index < 0 {
 			continue
 		} else if uint32(server_index) == n.Index {
