@@ -199,15 +199,13 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	defer fileClip.Close()
 
 	// execute maple_exe
-	// todo: the problem of executing command in Go
-	// how to deal with maple_local_file??
 	// get a "result" file after the maple_exe finished
 	// scan the "result" file by line to map and using this map to output file
-	execname := Task.ExecName
-	inputFileName := Task.LocalFileName
+	execname := args.ExecName
+	inputFileName := args.LocalFileName
 	intermediate_file_name := "result"
 	cmd := "./" + execname + "<" + inputFileName + ">" + intermediate_file_name
-	_, err := exec.Command("/bin/sh", "-c", cmd).Output()
+	_, err = exec.Command("/bin/sh", "-c", cmd).Output()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}
@@ -255,8 +253,8 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		local_file_path := FILEPREFIX + key
 		f, _ := os.Stat(local_file_path)
 		inter_target_index := hash_string_to_int(node, key)
-
-		file_system.Send_file_tcp(node, int32(inter_target_index), local_file_path, local_file_path, f.Size()) //Todo: check the sendfile function
+		//Todo: check the sendfile function of its filename and filepath
+		file_system.Send_file_tcp(node, int32(inter_target_index), local_file_path, local_file_path, f.Size())
 		// Is filepath = filename here? Is it sending multiple files here? will they wait others?
 	}
 	return nil
@@ -367,6 +365,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			ServerIp:       server,
 			SourceIp:       ChangeIPtoString(mjreq.SenderIp),
 			LastTime:       timestamppb.Now(),
+			ExecName:       mjreq.MapleExe,
 		}
 		// call server's RPC methods
 		client, err := rpc.Dial("tcp", task.ServerIp+":"+RPCPORT)
