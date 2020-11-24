@@ -85,7 +85,7 @@ client split the whole sdfs_src_file and generate file clips
 func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileName string) map[int]string {
 	fileClips := make(map[int]string, mapleNum)
 	// get sdfs_src_file
-	//todo: should we put these file clips as sdfsFile or we just want to transfer file between nodes? We can't get file like this
+
 	go file_system.GetFile(n, sdfsFileName, localFileName)
 	time.Sleep(GETFILEWAIT)
 	// check if we get the file
@@ -141,14 +141,14 @@ type Server struct {
 
 // features to describe maple/juice task
 type Task struct {
-	TaskNum       int
-	SdfsFileName  string
-	LocalFileName string
-	Status        string
-	TaskType      string // "maple"/"juice"
-	ServerIp      string // server in charge of this task
-	SourceIp      string // server has that file
-	LastTime      *timestamppb.Timestamp
+	TaskNum        int
+	RemoteFileName string
+	LocalFileName  string
+	Status         string //TODO: do we need status to keep record of task status???
+	TaskType       string //"maple"/"juice"
+	ServerIp       string // server in charge of this task
+	SourceIp       string // server has that file
+	LastTime       *timestamppb.Timestamp
 	//NodeInfo   *net_node.Node
 }
 
@@ -163,6 +163,15 @@ func NewMapleServer(n *net_node.Node) *Server {
 }
 
 /*
+Server get and check the file clip
+*/
+// filename- remote file name
+// local filePath- local file name
+func getFileClip(n *net_node.Node, filename string, local_filepath string, serverIndex int) {
+	file_system.GetFileWithIndex(n, filename, local_filepath, serverIndex)
+}
+
+/*
 Server run maple task on file clip
 */
 //fileName string, fileStart int, fileEnd int
@@ -170,23 +179,23 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// read file clip, same as "get" command
 	// var fileReq = make(chan bool)
 	node := mapleServer.NodeInfo
-	// check if we have the file
-	if _, ok := mapleServer.NodeInfo.Files[args.SdfsFileName]; !ok {
-		fmt.Println(args.SdfsFileName, "not exist!")
+	index := findIndexByIp(node, args.SourceIp)
+	if index == -1 {
+		fmt.Println("Can't find source server!")
 		return nil
 	}
-	go file_system.GetFile(node, args.SdfsFileName, args.LocalFileName)
+	go getFileClip(node, args.RemoteFileName, args.LocalFileName, index)
 	time.Sleep(GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(args.LocalFileName) {
-		fmt.Println("Can't get the file:  " + args.SdfsFileName + ". Check the Internet!")
+		fmt.Println("Can't get the file:  " + args.RemoteFileName + ". Check the Internet!")
 		return nil
 	}
-
 	fileClip, err := os.Open(args.LocalFileName)
-	//input_FileName := args.SdfsFileName         //need update
+	//input_FileName := args.RemoteFileName         //need update
 	net_node.CheckError(err)
 	defer fileClip.Close()
+
 	// execute maple_exe
 	// todo: the problem of executing command in Go
 	// how to deal with maple_local_file??
@@ -337,17 +346,17 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		master.FileTaskMap[fileClips[index]] = server
 		// generate the task
 		task := &Task{
-			TaskNum:       i,
-			SdfsFileName:  master.FileTaskMap[fileClips[index]],
-			LocalFileName: master.FileTaskMap[fileClips[index]],
-			Status:        "Allocated",
-			TaskType:      "Maple",
-			ServerIp:      server,
-			SourceIp:      ChangeIPtoString(mjreq.SenderIp),
-			LastTime:      timestamppb.Now(),
+			TaskNum:        i,
+			RemoteFileName: master.FileTaskMap[fileClips[index]],
+			LocalFileName:  master.FileTaskMap[fileClips[index]],
+			Status:         "Allocated",
+			TaskType:       "Maple",
+			ServerIp:       server,
+			SourceIp:       ChangeIPtoString(mjreq.SenderIp),
+			LastTime:       timestamppb.Now(),
 		}
 		// call server's RPC methods
-		client, err := rpc.Dial("tcp", task.SourceIp+":"+RPCPORT)
+		client, err := rpc.Dial("tcp", task.ServerIp+":"+RPCPORT)
 		if err != nil {
 			fmt.Println("Can't dial server RPC")
 			return nil
@@ -450,4 +459,17 @@ func hash_string_to_int(n *net_node.Node, key string) int {
 	val := h.Sum32()
 	alive_server_size := len(n.Table)
 	return int(val) % alive_server_size
+}
+
+/*
+Server find index of a certain node with its IP
+*/
+func findIndexByIp(n *net_node.Node, ip string) int {
+	var index = -1
+	for i, member := range n.Table {
+		if strings.Compare(ChangeIPtoString(member.Address.Ip), ip) == 0 {
+			index = i
+		}
+	}
+	return index
 }

@@ -184,13 +184,14 @@ func printCLIHelp() {
 	fmt.Println("(all scenarios) exit")
 }
 
-func execute_join_command(node *net_node.Node, args []string, node_active bool) *net_node.Node {
+func execute_join_command(node *net_node.Node, args []string, node_active bool, server *maple_juice.Server, master *maple_juice.Master) *net_node.Node {
 	if len(args) != 2 || node_active {
 		printCLIHelp()
 		return nil
 	} else {
 		node = join_and_leave.ExecuteJoin(args[1:])
 		node.Initialize()
+		initMapleJuice(server, master, node)
 		log.Println(node.Address, "Joining")
 		go run_server(node)
 		return node
@@ -296,8 +297,8 @@ func execute_store_command(node *net_node.Node, args []string, node_active bool)
 }
 
 // maple <maple_exe> <mapleNum> <sdfs_prefix> <sdfs_src_file>
-func excute_maple_command(node *net_node.Node, args []string, server *maple_juice.Server, master *maple_juice.Master) {
-	initMapleJuice(server, master, node)
+func excute_maple_command(node *net_node.Node, args []string) {
+	//initMapleJuice(server, master, node)
 	mapleNum, _ := strconv.Atoi(args[2])
 	maple_juice.CallMaple(node, args[0], args[1], mapleNum, args[4])
 }
@@ -329,7 +330,7 @@ func CLI() {
 
 		// Join command
 		case strings.Compare(args[0], "join") == 0:
-			node = execute_join_command(node, args, node_active)
+			node = execute_join_command(node, args, node_active, server, master)
 
 		// Leave command
 		case strings.Compare(args[0], "leave") == 0:
@@ -377,7 +378,7 @@ func CLI() {
 
 		// MapleJuice
 		case strings.Compare(args[0], "maple") == 0:
-			excute_maple_command(node, args, server, master)
+			excute_maple_command(node, args)
 
 		// Invalid command
 		default:

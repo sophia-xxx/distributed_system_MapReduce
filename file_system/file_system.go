@@ -834,3 +834,22 @@ func GetFile(n *net_node.Node, filename string, local_filepath string) {
 	first_line := []byte("G_" + index_str + file_path_str + filename_str)
 	conn.Write(first_line)
 }
+
+/*
+server get file using server index
+*/
+func GetFileWithIndex(n *net_node.Node, filename string, local_filepath string, serverIndex int) {
+	// Open a TCP connection
+	remote_addr := net_node.ConvertToAddr(n.Table[serverIndex].Address)
+	remote_tcp_addr := net_node.ConvertUDPToTCP(*remote_addr)
+	conn, err := net.DialTCP("tcp", nil, remote_tcp_addr)
+	net_node.CheckError(err)
+	defer conn.Close()
+
+	// Now, send over the file metadata
+	index_str := fmt.Sprintf("%32d", n.Index)
+	file_path_str := fmt.Sprintf("%100s", filename)
+	filename_str := fmt.Sprintf("%100s", local_filepath)
+	first_line := []byte("G_" + index_str + file_path_str + filename_str)
+	conn.Write(first_line)
+}
