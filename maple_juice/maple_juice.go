@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -144,6 +145,7 @@ type Task struct {
 	TaskNum        int
 	RemoteFileName string
 	LocalFileName  string
+	ExecName       string
 	Status         string //TODO: do we need status to keep record of task status???
 	TaskType       string //"maple"/"juice"
 	ServerIp       string // server in charge of this task
@@ -201,13 +203,24 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// how to deal with maple_local_file??
 	// get a "result" file after the maple_exe finished
 	// scan the "result" file by line to map and using this map to output file
-
+	execname := Task.ExecName
+	inputFileName := Task.LocalFileName
+	intermediate_file_name := "result"
+	cmd := "./" + execname + "<" + inputFileName + ">" + intermediate_file_name
+	_, err := exec.Command("/bin/sh", "-c", cmd).Output()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
 	//sdfs_prefix = args.prefix //need add a prefix parameter in args
 
 	//read in stdin now, need to use some sort of ifstream
+	file, err := os.Open(inputFileName) // May need to updated to filePath
+	if err != nil {
+		fmt.Println("Can not open the MapleTask input file!")
+	}
 	var of_map map[string]*os.File
 	of_map = make(map[string]*os.File)
-	input := bufio.NewScanner(os.Stdin) // need update to input file stream
+	input := bufio.NewScanner(file) // need update to input file stream
 	for {
 		if !input.Scan() {
 			break
