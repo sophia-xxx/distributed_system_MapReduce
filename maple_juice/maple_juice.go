@@ -11,6 +11,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -179,9 +180,9 @@ Server run maple task on file clip
 //fileName string, fileStart int, fileEnd int
 func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// read file clip, same as "get" command
-	// var fileReq = make(chan bool)
 	node := mapleServer.NodeInfo
 	index := findIndexByIp(node, args.SourceIp)
+
 	if index == -1 {
 		fmt.Println("Can't find source server!")
 		return nil
@@ -193,26 +194,28 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		fmt.Println("Can't get the file:  " + args.RemoteFileName + ". Check the Internet!")
 		return nil
 	}
-	fileClip, err := os.Open(args.LocalFileName)
-	//input_FileName := args.RemoteFileName         //need update
-	net_node.CheckError(err)
-	defer fileClip.Close()
+	//fileClip, err := os.Open(args.LocalFileName)
+	////input_FileName := args.RemoteFileName         //need update
+	//net_node.CheckError(err)
+	//defer fileClip.Close()
 
 	// execute maple_exe
 	// get a "result" file after the maple_exe finished
 	// scan the "result" file by line to map and using this map to output file
+
+	// todo: the final result of this mapletask should be []string (filename)
 	execname := args.ExecName
 	inputFileName := args.LocalFileName
 	intermediate_file_name := "result"
 	cmd := "./" + execname + "<" + inputFileName + ">" + intermediate_file_name
-	_, err = exec.Command("/bin/sh", "-c", cmd).Output()
+	_, err := exec.Command("/bin/sh", "-c", cmd).Output()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}
 	//sdfs_prefix = args.prefix //need add a prefix parameter in args
 
 	//read in stdin now, need to use some sort of ifstream
-	file, err := os.Open(inputFileName) // May need to updated to filePath
+	file, err := os.Open(intermediate_file_name) // May need to updated to filePath
 	if err != nil {
 		fmt.Println("Can not open the MapleTask input file!")
 	}
@@ -252,10 +255,21 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	for key := range of_map {
 		local_file_path := FILEPREFIX + key
 		f, _ := os.Stat(local_file_path)
-		inter_target_index := hash_string_to_int(node, key)
-		//Todo: check the sendfile function of its filename and filepath
-		file_system.Send_file_tcp(node, int32(inter_target_index), local_file_path, local_file_path, f.Size())
-		// Is filepath = filename here? Is it sending multiple files here? will they wait others?
+		// find the target node to merge and store the sdfs_prefix_key file
+		targetIndex := determineIndex(node, key)
+		if targetIndex == -1 {
+			fmt.Println("Can't get target index!")
+			continue
+		}
+		// server cannot send files to themselves
+		if targetIndex == int(node.Index) {
+			// todo:consider node may send file to itself in mapleTask
+		} else {
+			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size())
+			// Is filepath = filename here?
+			//Todo: check the sendfile function of its filename and filepath, the remote file should have taskNo
+		}
+
 	}
 	return nil
 }
@@ -374,7 +388,8 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			return nil
 		}
 		mapleResults := make([]string, 10)
-		// TODO: Better to use asynchronous call here- client.Go()
+		// better to use asynchronous call here- client.Go()
+		// otherwise it will block the channel, then the whole system will be hanged
 		err = client.Call("MJServer.MapleTask", task, &mapleResults)
 		if err != nil {
 			fmt.Println(err)
@@ -462,16 +477,16 @@ func Hash(s string) uint32 {
 	return h.Sum32()
 }
 
-/*
-Hash a key string into a int
-*/
-func hash_string_to_int(n *net_node.Node, key string) int {
-	h := fnv.New32a()
-	h.Write([]byte(key))
-	val := h.Sum32()
-	alive_server_size := len(n.Table)
-	return int(val) % alive_server_size
-}
+///*
+//Hash a key string into a int
+//*/
+//func hash_string_to_int(n *net_node.Node, key string) int {
+//	h := fnv.New32a()
+//	h.Write([]byte(key))
+//	val := h.Sum32()
+//	alive_server_size := len(n.Table)
+//	return int(val) % alive_server_size
+//}
 
 /*
 Server find index of a certain node with its IP
@@ -484,4 +499,35 @@ func findIndexByIp(n *net_node.Node, ip string) int {
 		}
 	}
 	return index
+}
+
+// server using hash function to determine the target server to merge all the files for a certain key
+// It also means that the target node will store the sdfs_prefix_key file
+func determineIndex(node *net_node.Node, key string) int {
+	var members = make([]string, 10)
+	var finalIndex = -1
+	for _, node := range node.Table {
+		if strings.Compare(ChangeIPtoString(node.Address.Ip), MASTERIP) == 0 {
+			continue
+		}
+		ip := ChangeIPtoString(node.Address.Ip)
+		members = append(members, ip)
+	}
+	if len(members) == 0 {
+		fmt.Println("No members in the list")
+		return -1
+	}
+	// sort members
+	sort.Strings(members)
+	// hash key string into int then find temp index
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	val := h.Sum32()
+	alive_server_size := len(members)
+	tempIndex := int(val) % alive_server_size
+	targetIp := members[tempIndex]
+	finalIndex = findIndexByIp(node, targetIp)
+
+	return finalIndex
+
 }
