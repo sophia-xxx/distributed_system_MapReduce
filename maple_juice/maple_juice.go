@@ -174,53 +174,27 @@ func getFileClip(n *net_node.Node, filename string, local_filepath string, serve
 	file_system.GetFileWithIndex(n, filename, local_filepath, serverIndex)
 }
 
-/*
-Server run maple task on file clip
-*/
-//fileName string, fileStart int, fileEnd int
-func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
-	// read file clip, same as "get" command
-	node := mapleServer.NodeInfo
-	index := findIndexByIp(node, args.SourceIp)
-
-	if index == -1 {
-		fmt.Println("Can't find source server!")
-		return nil
-	}
-	go getFileClip(node, args.RemoteFileName, args.LocalFileName, index)
-	time.Sleep(GETFILEWAIT)
-	// check if we get the file
-	if !WhetherFileExist(args.LocalFileName) {
-		fmt.Println("Can't get the file:  " + args.RemoteFileName + ". Check the Internet!")
-		return nil
-	}
-	//fileClip, err := os.Open(args.LocalFileName)
-	////input_FileName := args.RemoteFileName         //need update
-	//net_node.CheckError(err)
-	//defer fileClip.Close()
-
-	// execute maple_exe
-	// get a "result" file after the maple_exe finished
-	// scan the "result" file by line to map and using this map to output file
-
-	// todo: the final result of this mapletask should be []string (filename)
-	execname := args.ExecName
-	inputFileName := args.LocalFileName
-	intermediate_file_name := "result"
-	cmd := "./" + execname + "<" + inputFileName + ">" + intermediate_file_name
+// execute maple_exe and get result file
+func executeMapleExe(exe string, inputFile string, resFileName string) error {
+	execname := exe
+	inputFileName := inputFile
+	cmd := "./" + execname + "<" + inputFileName + ">" + resFileName
 	_, err := exec.Command("/bin/sh", "-c", cmd).Output()
 	if err != nil {
-		fmt.Printf("%s", err)
+		//fmt.Printf("%s", err)
+		return err
 	}
-	//sdfs_prefix = args.prefix //need add a prefix parameter in args
+	return nil
+}
 
-	//read in stdin now, need to use some sort of ifstream
-	file, err := os.Open(intermediate_file_name) // May need to updated to filePath
+func splitMapleResultFile(resultFileName string, taskID int, of_map map[string]*os.File) error {
+	file, err := os.Open(resultFileName) // May need to updated to filePath
 	if err != nil {
-		fmt.Println("Can not open the MapleTask input file!")
+		fmt.Println("Can not open the maple_result file!")
+		return err
 	}
-	var of_map map[string]*os.File
-	of_map = make(map[string]*os.File)
+	//var of_map map[string]*os.File
+	//of_map = make(map[string]*os.File)
 	input := bufio.NewScanner(file) // need update to input file stream
 	for {
 		if !input.Scan() {
@@ -232,12 +206,12 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		key := str[0]
 		f, ok := of_map[key]
 		if !ok {
-			append_file_name := FILEPREFIX + key + "_" + strconv.Itoa(Task.TaskNum)
+			append_file_name := FILEPREFIX + key + "_" + strconv.Itoa(taskID)
 			//f, err := os.OpenFile(append_file_name, os.O_RDONLY|os.O_CREATE|os.O_APPEND, 0666)
 			f, err := os.Create(append_file_name)
 			if err != nil {
 				log.Println("open file error :", err)
-				return nil
+				return err
 			}
 			of_map[key] = f
 		}
@@ -245,15 +219,52 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		_, err := f.WriteString(line + "\n")
 		if err != nil {
 			log.Println(err)
-			return nil
+			return err
 		}
 	}
 	for key := range of_map {
 		of_map[key].Close()
 	}
+	return nil
+}
 
-	for key := range of_map {
-		local_file_path := FILEPREFIX + key
+/*
+Server run maple task on file clip
+*/
+//fileName string, fileStart int, fileEnd int
+func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
+	// read file clip, same as "get" command
+	node := mapleServer.NodeInfo
+	index := findIndexByIp(node, args.SourceIp)
+	if index == -1 {
+		fmt.Println("Can't find source server!")
+		return nil
+	}
+	go getFileClip(node, args.RemoteFileName, args.LocalFileName, index)
+	time.Sleep(GETFILEWAIT)
+	// check if we get the file
+	if !WhetherFileExist(args.LocalFileName) {
+		fmt.Println("Can't get the file:  " + args.RemoteFileName + ". Check the Internet!")
+		return nil
+	}
+	// execute maple_exe
+	// get a "result" file after the maple_exe finished
+	resultFileName := "maple_result"
+	err := executeMapleExe(args.ExecName, args.LocalFileName, resultFileName)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	// scan the "result" file by line to map and using this map to output file
+	keyFileMap := make(map[string]*os.File)
+	err = splitMapleResultFile(resultFileName, args.TaskNum, keyFileMap)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	// send file to target node to merge
+	for key := range keyFileMap {
+		local_file_path := FILEPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
 		f, _ := os.Stat(local_file_path)
 		// find the target node to merge and store the sdfs_prefix_key file
 		targetIndex := determineIndex(node, key)
@@ -266,11 +277,15 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 			// todo:consider node may send file to itself in mapleTask
 		} else {
 			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size())
-			// Is filepath = filename here?
-			//Todo: check the sendfile function of its filename and filepath, the remote file should have taskNo
 		}
 
 	}
+	// get all keys and return list
+	list := make([]string, 10)
+	for key := range keyFileMap {
+		list = append(list, key)
+	}
+	*replyKeyList = list
 	return nil
 }
 
