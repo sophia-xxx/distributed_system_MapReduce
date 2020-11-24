@@ -214,7 +214,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	//sdfs_prefix = args.prefix //need add a prefix parameter in args
 
 	//read in stdin now, need to use some sort of ifstream
-	file, err := os.Open(inputFileName) // May need to updated to filePath
+	file, err := os.Open(intermediate_file_name) // May need to updated to filePath
 	if err != nil {
 		fmt.Println("Can not open the MapleTask input file!")
 	}
