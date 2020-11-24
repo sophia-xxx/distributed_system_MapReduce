@@ -231,7 +231,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		key := str[0]
 		f, ok := of_map[key]
 		if !ok {
-			append_file_name := FILEPREFIX + key
+			append_file_name := FILEPREFIX + key + "_" + strconv.Itoa(Task.TaskNum)
 			//f, err := os.OpenFile(append_file_name, os.O_RDONLY|os.O_CREATE|os.O_APPEND, 0666)
 			f, err := os.Create(append_file_name)
 			if err != nil {
