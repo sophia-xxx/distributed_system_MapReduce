@@ -8,8 +8,8 @@ import (
 // func main() {
 // 	//in := bytes.NewBuffer(nil)
 // 	//outfile := "syscallout"
-// 	infile := "maple_wordcount_test1"
-// 	exename := "../mapleJuice_exe/wordcount_maple.exe"
+// 	infile := "wc_input"
+// 	exename := "../mj_exe/wc_maple.exe"
 // 	cmd := exename + "<" + infile
 // 	// + ">" + outfile
 // 	res := exec.Command("/bin/sh", "-c", cmd)
@@ -32,7 +32,7 @@ import (
 //}
 
 func main() {
-	_, err := exec.Command("/bin/sh", "-c", "maple_vote < maple_vote_test1 >result").Output()
+	_, err := exec.Command("/bin/sh", "-c", "maple_vote < vote_input >result").Output()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}
