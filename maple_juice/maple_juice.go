@@ -28,7 +28,10 @@ var TimeFormat = "2006-01-02 15:04:05"
 func split(fileName string, clipNum int) map[int]string {
 	fileClips := make(map[int]string, clipNum)
 	// read lines of file
-	file, _ := os.Open("./" + fileName)
+	file, err := os.Open("./" + fileName)
+	if err != nil {
+		fmt.Println("Can't open file!")
+	}
 	defer file.Close()
 	fileScanner := bufio.NewScanner(file)
 	lineCount := 0
