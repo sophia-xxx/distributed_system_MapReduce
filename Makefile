@@ -1,4 +1,4 @@
-NETID = mpj4
+NETID = $USER
 
 all: build deploy
 
