@@ -502,11 +502,12 @@ func ReceiveFile(connection net.Conn) {
 	}
 	data := buff[:num_bytes_read]
 	new_file.Write(data)
-	file_name_prefix := filename[0:len(config.FILEPREFIX)]
-	if file_name_prefix == config.FILEPREFIX {
-		CreatAppendSdfsKeyFile(filename)
+	if len(filename) >= len(config.FILEPREFIX) {
+		file_name_prefix := filename[0:len(config.FILEPREFIX)]
+		if file_name_prefix == config.FILEPREFIX {
+			CreatAppendSdfsKeyFile(filename)
+		}
 	}
-
 	// Now, write the rest of the file
 	io.Copy(new_file, connection)
 }
