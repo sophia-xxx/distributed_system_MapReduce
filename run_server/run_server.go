@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"mp3/config"
 	"mp3/maple_juice"
 	"net"
 	"os"
@@ -390,7 +391,7 @@ func CLI() {
 func initMapleJuice(server *maple_juice.Server, master *maple_juice.Master, node *net_node.Node) {
 	server = maple_juice.NewMapleServer(node)
 	master = maple_juice.NewMaster(node)
-	if strings.Compare(maple_juice.ChangeIPtoString(node.Address.IP), maple_juice.MASTERIP) == 0 {
+	if strings.Compare(maple_juice.ChangeIPtoString(node.Address.IP), config.MASTERIP) == 0 {
 		go maple_juice.StartMasterRpc(master)
 	} else {
 		go maple_juice.StartServerRPC(server)
