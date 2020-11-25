@@ -32,7 +32,7 @@ var FILE_DELETE int32 = 15
 var BLOCKING int32 = 16
 var UNBLOCKING int32 = 16
 
-var INTRO_PORT = 10001
+var INTRO_PORT = 9004
 var INTRO_IP = []byte{172, 22, 94, 48}
 
 type Node struct {
