@@ -4,9 +4,10 @@ import (
 	"log"
 	"net"
 
+	pings "mp3/ping_protobuff"
+
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	pings "mp3/ping_protobuff"
 )
 
 // Node Statuses

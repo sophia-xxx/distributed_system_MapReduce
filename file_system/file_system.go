@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"mp3/net_node"
@@ -864,6 +865,45 @@ func GetFileWithIndex(n *net_node.Node, filename string, local_filepath string, 
 	conn.Write(first_line)
 }
 
+// define mutex writer
+type SyncWriter struct {
+	m      sync.Mutex
+	Writer io.Writer
+}
+
+func (w *SyncWriter) Write(b []byte) (n int, err error) {
+	w.m.Lock()
+	defer w.m.Unlock()
+	return w.Writer.Write(b)
+}
+
+var WRITERMAP = make(map[string]*SyncWriter)
+
+/*
+	get local mutex writer for sync-writing
+*/
+func GetLocalSyncWriter(filename string) *SyncWriter {
+	if x, found := WRITERMAP[filename]; found {
+		return x
+	}
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		f, err := os.Create(filename)
+		if err != nil {
+			fmt.Println("create error")
+		}
+		fmt.Println("create", filename)
+		WRITERMAP[filename] = &SyncWriter{sync.Mutex{}, f}
+	} else {
+		f, err := os.Open(filename)
+		if err != nil {
+			fmt.Println("open error")
+		}
+		WRITERMAP[filename] = &SyncWriter{sync.Mutex{}, f}
+	}
+	return WRITERMAP[filename]
+}
+
 // After Receiving a sdfs_intermediate_file, do the append
 func CreatAppendSdfsKeyFile(filename string) {
 	var target_sdfs_filename string
@@ -873,40 +913,37 @@ func CreatAppendSdfsKeyFile(filename string) {
 			break
 		}
 	}
-	_, err := os.Stat(target_sdfs_filename)
-	if os.IsNotExist(err) {
-		f, err := os.Create(target_sdfs_filename)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		of_map[target_sdfs_filename] = f
-	} else {
-		f, err := os.Open(target_sdfs_filename)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		of_map[target_sdfs_filename] = f
-	}
-	f := of_map[target_sdfs_filename]
-
+	// _, err := os.Stat(target_sdfs_filename)
+	// if os.IsNotExist(err) {
+	// 	f, err := os.Create(target_sdfs_filename)
+	// 	of_map[target_sdfs_filename] = f
+	// } else {
+	// 	f, err := os.Open(target_sdfs_filename)
+	// 	of_map[target_sdfs_filename] = f
+	// }
+	// f := of_map[target_sdfs_filename]
+	writer := GetLocalSyncWriter(target_sdfs_filename)
 	ifstream, err := os.Open(filename)
 	if err != nil {
 		fmt.Println("Can not open the MapleTask input file!")
 	}
 	input := bufio.NewScanner(ifstream)
+	wg := sync.WaitGroup{}
 	for {
 		if !input.Scan() {
 			break
 		}
 		line := input.Text()
-		_, err := f.WriteString(line + "\n")
+		wg.Add(1)
+		go func(message string) {
+			fmt.Fprintln(writer, message)
+			wg.Done()
+		}(line)
+
 		if err != nil {
 			log.Println(err)
 			return
 		}
 	}
-	defer f.Close()
-	return
+	wg.Wait()
 }
