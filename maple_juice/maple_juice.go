@@ -28,7 +28,8 @@ var TimeFormat = "2006-01-02 15:04:05"
 func split(fileName string, clipNum int) map[int]string {
 	fileClips := make(map[int]string, clipNum)
 	// read lines of file
-	file, err := os.Open("./" + fileName)
+	execPath, _ := os.Getwd()
+	file, err := os.Open(execPath + "/" + fileName)
 	if err != nil {
 		fmt.Println("Can't open file!")
 	}
@@ -39,12 +40,12 @@ func split(fileName string, clipNum int) map[int]string {
 		lineCount++
 	}
 	fmt.Println(file.Name() + " file has " + strconv.Itoa(lineCount) + " lines!!!")
-	fmt.Println(os.Getwd())
+	//fmt.Println(os.Getwd())
 
 	// split file into file clips, then generate list of fileNames
 	splitLines := lineCount/clipNum + 1
 	// re-open the file
-	file, _ = os.Open("./" + fileName)
+	file, _ = os.Open(execPath + "/" + fileName)
 	fileScanner = bufio.NewScanner(file)
 	// determine whether the file is end
 	endScan := false
