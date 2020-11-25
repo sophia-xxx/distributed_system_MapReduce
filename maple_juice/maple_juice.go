@@ -293,7 +293,10 @@ Server start listening RPC call
 */
 func StartServerRPC(mapleServer *Server) {
 	rpc.Register(mapleServer)
-	listener, _ := net.Listen("tcp", ":"+config.RPCPORT)
+	listener, err := net.Listen("tcp", ":"+config.RPCPORT)
+	if err != nil {
+		fmt.Println("Can't start RPC. Port " + config.RPCPORT + " has been used!")
+	}
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
