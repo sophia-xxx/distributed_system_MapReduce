@@ -84,6 +84,7 @@ func run_tcp(n *net_node.Node) {
 	defer TCPConn.Close()
 	if err != nil {
 		log.Println(n.Address.Port, err)
+		return
 	}
 	log.Println(n.Address, "Running")
 
