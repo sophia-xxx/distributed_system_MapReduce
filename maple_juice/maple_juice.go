@@ -8,6 +8,7 @@ import (
 	"mp3/config"
 	"mp3/file_system"
 	"mp3/net_node"
+	pings "mp3/ping_protobuff"
 	"net"
 	"net/rpc"
 	"os"
@@ -28,8 +29,8 @@ var TimeFormat = "2006-01-02 15:04:05"
 func split(fileName string, clipNum int) map[int]string {
 	fileClips := make(map[int]string, clipNum)
 	// read lines of file
-	execPath, _ := os.Getwd()
-	file, err := os.Open(execPath + "/" + fileName)
+	//execPath, _ := os.Getwd()
+	file, err := os.Open("./" + fileName)
 	if err != nil {
 		fmt.Println("Can't open file!")
 	}
@@ -45,7 +46,7 @@ func split(fileName string, clipNum int) map[int]string {
 	// split file into file clips, then generate list of fileNames
 	splitLines := lineCount/clipNum + 1
 	// re-open the file
-	file, _ = os.Open(execPath + "/" + fileName)
+	file, _ = os.Open("./" + fileName)
 	fileScanner = bufio.NewScanner(file)
 	// determine whether the file is end
 	endScan := false
@@ -69,6 +70,8 @@ func split(fileName string, clipNum int) map[int]string {
 		// last line
 		line := fileScanner.Text()
 		fileSplit.WriteString(line + "\n")
+		// add to fileClip map
+		fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
 		// check whether this write successfully
 		fileInfo, _ := fileSplit.Stat()
 		//fileClips[count] = CLIPPREFIX + strconv.Itoa(count)
@@ -358,9 +361,10 @@ master rpc method to start MapleJuice
 */
 func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	// get all potential servers
-	members := mjreq.NodeInfo.Table
+	//members := mjreq.NodeInfo.Table
+	aviMembers := getAllAviMember(mjreq.NodeInfo)
 	servers := make([]string, 10)
-	for _, member := range members {
+	for _, member := range aviMembers {
 		IPString := ChangeIPtoString(member.Address.Ip)
 		if strings.Compare(IPString, config.MASTERIP) != 0 {
 			servers = append(servers, IPString)
@@ -519,12 +523,24 @@ func findIndexByIp(n *net_node.Node, ip string) int {
 	return index
 }
 
+func getAllAviMember(node *net_node.Node) []*pings.TableEntryProto {
+	aviMember := make([]*pings.TableEntryProto, 10)
+	for _, member := range node.Table {
+		if member.Status == net_node.FAIL|net_node.FAILED|net_node.LEAVING {
+			continue
+		}
+		aviMember = append(aviMember, member)
+	}
+	return aviMember
+}
+
 // server using hash function to determine the target server to merge all the files for a certain key
 // It also means that the target node will store the sdfs_prefix_key file
 func determineIndex(node *net_node.Node, key string) int {
 	var members = make([]string, 10)
 	var finalIndex = -1
-	for _, node := range node.Table {
+	aviMember := getAllAviMember(node)
+	for _, node := range aviMember {
 		if strings.Compare(ChangeIPtoString(node.Address.Ip), config.MASTERIP) == 0 {
 			continue
 		}
