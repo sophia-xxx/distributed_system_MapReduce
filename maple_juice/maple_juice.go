@@ -39,6 +39,7 @@ func split(fileName string, clipNum int) map[int]string {
 		lineCount++
 	}
 	fmt.Println(file.Name() + " file has " + strconv.Itoa(lineCount) + " lines!!!")
+	fmt.Println(os.Getwd())
 
 	// split file into file clips, then generate list of fileNames
 	splitLines := lineCount/clipNum + 1
