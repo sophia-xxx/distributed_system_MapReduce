@@ -876,9 +876,17 @@ func CreatAppendSdfsKeyFile(filename string) {
 	_, err := os.Stat(target_sdfs_filename)
 	if os.IsNotExist(err) {
 		f, err := os.Create(target_sdfs_filename)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		of_map[target_sdfs_filename] = f
 	} else {
 		f, err := os.Open(target_sdfs_filename)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		of_map[target_sdfs_filename] = f
 	}
 	f := of_map[target_sdfs_filename]
