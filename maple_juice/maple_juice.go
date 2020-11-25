@@ -296,6 +296,7 @@ func StartServerRPC(mapleServer *Server) {
 	listener, err := net.Listen("tcp", ":"+config.RPCPORT)
 	if err != nil {
 		fmt.Println("Can't start RPC. Port " + config.RPCPORT + " has been used!")
+		return
 	}
 	for {
 		conn, err := listener.Accept()
