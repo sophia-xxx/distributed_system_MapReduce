@@ -4,9 +4,10 @@ import (
 	"log"
 	"net"
 
+	pings "mp3/ping_protobuff"
+
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	pings "mp3/ping_protobuff"
 )
 
 // Node Statuses
@@ -32,7 +33,7 @@ var FILE_DELETE int32 = 15
 var BLOCKING int32 = 16
 var UNBLOCKING int32 = 16
 
-var INTRO_PORT = 9004
+var INTRO_PORT = 9005
 var INTRO_IP = []byte{172, 22, 94, 48}
 
 type Node struct {
