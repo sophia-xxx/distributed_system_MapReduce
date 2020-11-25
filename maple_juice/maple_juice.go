@@ -268,6 +268,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		// server cannot send files to themselves
 		if targetIndex == int(node.Index) {
 			// todo:consider node may send file to itself in mapleTask
+			file_system.CreatAppendSdfsKeyFile(local_file_path)
 		} else {
 			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size())
 		}
