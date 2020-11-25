@@ -33,7 +33,7 @@ var BLOCKING int32 = 16
 var UNBLOCKING int32 = 16
 
 var INTRO_PORT = 9004
-var INTRO_IP = []byte{172, 22, 94, 48}
+var INTRO_IP = []byte{172, 22, 156, 22} // 172.22.156.22   g07-01
 
 type Node struct {
 	Table     []*pings.TableEntryProto
