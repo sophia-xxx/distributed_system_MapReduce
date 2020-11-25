@@ -8,5 +8,5 @@ const (
 	FILEPREFIX  = "sdfs_intermediate_file_prefix_"
 	RPCPORT     = "1234"
 	GETFILEWAIT = 4 * time.Second
-	MASTERIP    = "172.22.94.48"
+	MASTERIP    = "172.22.156.22"
 )
