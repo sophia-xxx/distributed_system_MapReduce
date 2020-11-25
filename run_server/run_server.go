@@ -25,6 +25,8 @@ func run_udp(n *net_node.Node) {
 	defer UDPConn.Close()
 	if err != nil {
 		log.Println(n.Address.Port, err)
+		fmt.Println("Can't run UDP listening")
+		return
 	}
 	log.Println(n.Address, "Running")
 
