@@ -1,4 +1,4 @@
-NETID = $USER
+NETID = $(USER)
 
 all: build deploy
 
