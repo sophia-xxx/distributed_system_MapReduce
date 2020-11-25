@@ -33,8 +33,8 @@ var FILE_DELETE int32 = 15
 var BLOCKING int32 = 16
 var UNBLOCKING int32 = 16
 
-var INTRO_PORT = 9040
-var INTRO_IP = []byte{172, 22, 158, 22} // 172.22.156.22   g07-01
+var INTRO_PORT = 6008
+var INTRO_IP = []byte{172, 22, 156, 22} // 172.22.156.22   g07-01
 
 type Node struct {
 	Table     []*pings.TableEntryProto
