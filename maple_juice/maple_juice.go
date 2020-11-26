@@ -249,7 +249,7 @@ func splitMapleResultFile(resultFileName string, taskID int, of_map map[string]*
 Server run maple task on file clip
 */
 //fileName string, fileStart int, fileEnd int
-func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
+func (mapleServer *Server) MapleTask(args Task, replyKeyList *string) error {
 	// read file clip, same as "get" command
 	node := mapleServer.NodeInfo
 	index := findIndexByIp(node, args.SourceIp)
@@ -303,7 +303,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	for key := range keyFileMap {
 		list = append(list, key)
 	}
-	*replyKeyList = list
+	*replyKeyList = "test"
 	return nil
 }
 
@@ -429,7 +429,9 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			fmt.Println("Can't dial server RPC")
 			return nil
 		}
-		mapleResults := make([]string, 10)
+		fmt.Println("Dial server", task.ServerIp)
+
+		var mapleResults string
 		// better to use asynchronous call here- client.Go()
 		// otherwise it will block the channel, then the whole system will be hanged
 		err = client.Call("Server.MapleTask", task, &mapleResults)
@@ -437,7 +439,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			fmt.Println(err)
 			return nil
 		}
-		master.keyList = append(master.keyList, mapleResults...)
+		master.keyList = append(master.keyList, mapleResults)
 
 	}
 	fmt.Println(getTimeString() + " Finish Maple!")
