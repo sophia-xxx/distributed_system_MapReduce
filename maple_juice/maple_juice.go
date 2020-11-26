@@ -27,7 +27,7 @@ var TimeFormat = "2006-01-02 15:04:05"
 
 // filepath is "./filename"
 func split(fileName string, clipNum int) map[int]string {
-	fileClips := make(map[int]string, clipNum)
+	var fileClips map[int]string
 	// read lines of file
 	//execPath, _ := os.Getwd()
 	file, err := os.Open(fileName)
@@ -94,7 +94,7 @@ func split(fileName string, clipNum int) map[int]string {
 client split the whole sdfs_src_file and generate file clips
 */
 func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileName string) map[int]string {
-	fileClips := make(map[int]string, mapleNum)
+	var fileClips map[int]string
 	// get sdfs_src_file
 
 	//file_system.GetFile(n, sdfsFileName, localFileName)
@@ -249,7 +249,7 @@ func splitMapleResultFile(resultFileName string, taskID int, of_map map[string]*
 Server run maple task on file clip
 */
 //fileName string, fileStart int, fileEnd int
-func (mapleServer *Server) MapleTask(args Task, replyKeyList *string) error {
+func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// read file clip, same as "get" command
 	node := mapleServer.NodeInfo
 	index := findIndexByIp(node, args.SourceIp)
@@ -299,11 +299,11 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *string) error {
 
 	}
 	// get all keys and return list
-	list := make([]string, 10)
+	var list []string
 	for key := range keyFileMap {
 		list = append(list, key)
 	}
-	*replyKeyList = "test"
+	*replyKeyList = list
 	return nil
 }
 
@@ -367,7 +367,7 @@ func NewMaster(n *net_node.Node) *Master {
 		NodeInfo:    n,
 		FileTaskMap: make(map[string]string),
 		TaskMap:     make(map[string]Task),
-		keyList:     make([]string, 10),
+		keyList:     make([]string, 1),
 	}
 	return newMaster
 }
@@ -434,7 +434,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		}
 		fmt.Println(">>>Dial server " + server)
 
-		var mapleResults string
+		var mapleResults []string
 		// better to use asynchronous call here- client.Go()
 		// otherwise it will block the channel, then the whole system will be hanged
 		err = client.Call("Server.MapleTask", task, &mapleResults)
@@ -442,7 +442,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			fmt.Println(err)
 			return nil
 		}
-		master.keyList = append(master.keyList, mapleResults)
+		master.keyList = append(master.keyList, mapleResults...)
 
 	}
 	fmt.Println(getTimeString() + " Finish Maple!")
@@ -553,7 +553,7 @@ func findIndexByIp(n *net_node.Node, ip string) int {
 }
 
 func getAllAviMember(node *net_node.Node) []*pings.TableEntryProto {
-	aviMember := make([]*pings.TableEntryProto, 10)
+	var aviMember []*pings.TableEntryProto
 	for _, member := range node.Table {
 		if member.Status == net_node.FAIL|net_node.FAILED|net_node.LEAVING {
 			continue
@@ -567,7 +567,7 @@ func getAllAviMember(node *net_node.Node) []*pings.TableEntryProto {
 // server using hash function to determine the target server to merge all the files for a certain key
 // It also means that the target node will store the sdfs_prefix_key file
 func determineIndex(node *net_node.Node, key string) int {
-	var members = make([]string, 10)
+	var members []string
 	var finalIndex = -1
 	//aviMember := getAllAviMember(node)
 	//if len(aviMember) == 0 {
