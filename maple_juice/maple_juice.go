@@ -27,7 +27,7 @@ var TimeFormat = "2006-01-02 15:04:05"
 
 // filepath is "./filename"
 func split(fileName string, clipNum int) map[int]string {
-	fileClips := make(map[int]string, clipNum)
+	fileClips := make(map[int]string)
 	// read lines of file
 	//execPath, _ := os.Getwd()
 	file, err := os.Open(fileName)
@@ -69,6 +69,9 @@ func split(fileName string, clipNum int) map[int]string {
 			fileSplit.WriteString(line + "\n")
 			if !fileScanner.Scan() {
 				endScan = true
+				fileClips[count] = "CLIPPREFIX" + strconv.Itoa(count)
+				fileInfo, _ := fileSplit.Stat()
+				fmt.Println("File clip: ", fileInfo.Size())
 				break
 			}
 		}
