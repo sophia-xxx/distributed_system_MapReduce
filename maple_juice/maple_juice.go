@@ -97,7 +97,7 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 	fileClips := make(map[int]string, mapleNum)
 	// get sdfs_src_file
 
-	file_system.GetFile(n, sdfsFileName, localFileName)
+	//file_system.GetFile(n, sdfsFileName, localFileName)
 	time.Sleep(config.GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(localFileName) {
