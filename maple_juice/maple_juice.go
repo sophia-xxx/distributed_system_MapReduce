@@ -417,8 +417,8 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		// generate the task
 		task := &Task{
 			TaskNum:        i,
-			RemoteFileName: master.FileTaskMap[fileClips[index]],
-			LocalFileName:  master.FileTaskMap[fileClips[index]],
+			RemoteFileName: fileClips[index],
+			LocalFileName:  fileClips[index],
 			Status:         "Allocated",
 			TaskType:       "Maple",
 			ServerIp:       server,
