@@ -1,1 +1,2 @@
 put ./mj_exe/wc_input test
+maple ./mj_exe/wc_maple 3 sdfs test
