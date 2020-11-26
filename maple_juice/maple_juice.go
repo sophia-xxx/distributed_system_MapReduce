@@ -27,7 +27,7 @@ var TimeFormat = "2006-01-02 15:04:05"
 
 // filepath is "./filename"
 func split(fileName string, clipNum int) map[int]string {
-	var fileClips map[int]string
+	fileClips := make(map[int]string, clipNum)
 	// read lines of file
 	//execPath, _ := os.Getwd()
 	file, err := os.Open(fileName)
