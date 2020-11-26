@@ -118,7 +118,7 @@ func run_tcp(n *net_node.Node) {
 
 		// Putting the file
 		case "P_":
-			fmt.Println("RECIEVING FILE")
+			fmt.Printf("RECIEVING FILE")
 			file_system.ReceiveFile(connection)
 
 		// Acknowledgeing that write has ended
