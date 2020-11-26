@@ -386,7 +386,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	servers := make([]string, 10)
 	for _, member := range members {
 		IPString := ChangeIPtoString(member.Address.Ip)
-		fmt.Println(IPString)
+		//fmt.Println(IPString)
 		if strings.Compare(IPString, config.MASTERIP) != 0 {
 			servers = append(servers, IPString)
 		}
@@ -425,12 +425,12 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			ExecName:       mjreq.MapleExe,
 		}
 		// call server's RPC methods
-		client, err := rpc.Dial("tcp", task.ServerIp+":"+config.RPCPORT)
+		client, err := rpc.Dial("tcp", server+":"+config.RPCPORT)
 		if err != nil {
 			fmt.Println("Can't dial server RPC")
 			return nil
 		}
-		fmt.Println("Dial server", task.ServerIp)
+		fmt.Println("Dial server " + server)
 
 		var mapleResults string
 		// better to use asynchronous call here- client.Go()
