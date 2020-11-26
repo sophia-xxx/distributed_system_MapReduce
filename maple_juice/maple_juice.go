@@ -555,6 +555,7 @@ func getAllAviMember(node *net_node.Node) []*pings.TableEntryProto {
 		}
 		aviMember = append(aviMember, member)
 	}
+	fmt.Println(len(aviMember), " available members. ")
 	return aviMember
 }
 
