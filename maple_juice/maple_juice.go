@@ -386,6 +386,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	servers := make([]string, 10)
 	for _, member := range members {
 		IPString := ChangeIPtoString(member.Address.Ip)
+		fmt.Println(IPString)
 		if strings.Compare(IPString, config.MASTERIP) != 0 {
 			servers = append(servers, IPString)
 		}
