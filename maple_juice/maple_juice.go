@@ -447,7 +447,11 @@ master start listening RPC call
 */
 func StartMasterRpc(master *Master) {
 	rpc.Register(master)
-	listener, _ := net.Listen("tcp", ":"+config.RPCPORT)
+	listener, err := net.Listen("tcp", ":"+config.RPCPORT)
+	if err != nil {
+		fmt.Println("Can't start master RPC!")
+		return
+	}
 	for {
 		conn, err := listener.Accept()
 		if err != nil {

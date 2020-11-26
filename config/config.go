@@ -8,7 +8,7 @@ import (
 const (
 	CLIPPREFIX  = "sdfs_src_file_clip_"
 	FILEPREFIX  = "sdfs_intermediate_file_prefix_"
-	RPCPORT     = "6006"
+	RPCPORT     = "6008"
 	GETFILEWAIT = 4 * time.Second
 	MASTERIP    = "172.22.156.22"
 )
