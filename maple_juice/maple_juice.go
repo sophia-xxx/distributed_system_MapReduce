@@ -395,6 +395,8 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		fmt.Println("There is no available servers!")
 		return nil
 	}
+	fmt.Println(servers)
+
 	fileClips := mjreq.FileClip
 	// schedule the maple tasks
 	for i, server := range servers {
@@ -410,7 +412,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			}
 			collision++
 		}
-
+		fmt.Println(server)
 		master.FileTaskMap[fileClips[index]] = server
 		// generate the task
 		task := &Task{
