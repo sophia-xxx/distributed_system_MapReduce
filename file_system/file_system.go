@@ -510,6 +510,7 @@ func ReceiveFile(connection net.Conn) {
 	}
 	// Now, write the rest of the file
 	io.Copy(new_file, connection)
+	fmt.Println(filename)
 }
 
 /*
