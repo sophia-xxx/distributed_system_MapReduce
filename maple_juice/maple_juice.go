@@ -377,14 +377,14 @@ master rpc method to start MapleJuice
 */
 func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	// get all potential servers
-	//members := mjreq.NodeInfo.Table
-	aviMembers := getAllAviMember(mjreq.NodeInfo)
-	if len(aviMembers) == 0 {
-		fmt.Println("No available servers!!")
-		return nil
-	}
+	members := mjreq.NodeInfo.Table
+	//aviMembers := getAllAviMember(mjreq.NodeInfo)
+	//if len(aviMembers) == 0 {
+	//	fmt.Println("No available servers!!")
+	//	return nil
+	//}
 	servers := make([]string, 10)
-	for _, member := range aviMembers {
+	for _, member := range members {
 		IPString := ChangeIPtoString(member.Address.Ip)
 		if strings.Compare(IPString, config.MASTERIP) != 0 {
 			servers = append(servers, IPString)
@@ -564,12 +564,12 @@ func getAllAviMember(node *net_node.Node) []*pings.TableEntryProto {
 func determineIndex(node *net_node.Node, key string) int {
 	var members = make([]string, 10)
 	var finalIndex = -1
-	aviMember := getAllAviMember(node)
-	if len(aviMember) == 0 {
-		fmt.Println("No available servers!")
-		return -1
-	}
-	for _, node := range aviMember {
+	//aviMember := getAllAviMember(node)
+	//if len(aviMember) == 0 {
+	//	fmt.Println("No available servers!")
+	//	return -1
+	//}
+	for _, node := range node.Table {
 		if strings.Compare(ChangeIPtoString(node.Address.Ip), config.MASTERIP) == 0 {
 			continue
 		}
