@@ -383,7 +383,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	//	fmt.Println("No available servers!!")
 	//	return nil
 	//}
-	servers := make([]string, 10)
+	servers := make([]string, 1)
 	for _, member := range members {
 		IPString := ChangeIPtoString(member.Address.Ip)
 		//fmt.Println(IPString)
@@ -395,7 +395,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		fmt.Println("There is no available servers!")
 		return nil
 	}
-	fmt.Println(servers)
+	//fmt.Println(servers)
 
 	fileClips := mjreq.FileClip
 	// schedule the maple tasks
@@ -412,7 +412,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			}
 			collision++
 		}
-		fmt.Println(server)
+		//fmt.Println(server)
 		master.FileTaskMap[fileClips[index]] = server
 		// generate the task
 		task := &Task{
@@ -432,7 +432,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			fmt.Println("Can't dial server RPC")
 			return nil
 		}
-		fmt.Println("Dial server " + server)
+		fmt.Println(">>>Dial server " + server)
 
 		var mapleResults string
 		// better to use asynchronous call here- client.Go()
