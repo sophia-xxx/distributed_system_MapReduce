@@ -383,7 +383,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	//	fmt.Println("No available servers!!")
 	//	return nil
 	//}
-	servers := make([]string, 1)
+	var servers []string
 	for _, member := range members {
 		IPString := ChangeIPtoString(member.Address.Ip)
 		//fmt.Println(IPString)
