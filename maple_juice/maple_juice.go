@@ -432,7 +432,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		mapleResults := make([]string, 10)
 		// better to use asynchronous call here- client.Go()
 		// otherwise it will block the channel, then the whole system will be hanged
-		err = client.Call("MJServer.MapleTask", task, &mapleResults)
+		err = client.Call("Server.MapleTask", task, &mapleResults)
 		if err != nil {
 			fmt.Println(err)
 			return nil
