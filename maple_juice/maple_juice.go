@@ -69,7 +69,7 @@ func split(fileName string, clipNum int) map[int]string {
 			fileSplit.WriteString(line + "\n")
 			if !fileScanner.Scan() {
 				endScan = true
-				fileClips[count] = "CLIPPREFIX" + strconv.Itoa(count)
+				fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
 				fileInfo, _ := fileSplit.Stat()
 				fmt.Println("File clip: ", fileInfo.Size())
 				break
