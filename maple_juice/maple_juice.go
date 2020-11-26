@@ -454,7 +454,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 
 	// }
 
-	for index, clip_name := range fileClips {
+	for index, _ := range fileClips {
 		server := servers[index]
 
 		task := &Task{
