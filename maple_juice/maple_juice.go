@@ -402,25 +402,64 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	//fmt.Println(servers)
 
 	fileClips := mjreq.FileClip
+	if len(servers) < len(fileClips) {
+		fmt.Println("There is not enough servers for maple tasks!")
+		return nil
+	}
+
 	// schedule the maple tasks
-	for i, server := range servers {
-		var index int
-		var collision = 1
-		for {
-			// hash server Ip and get the index of fileClips
-			index = int(Hash(server+strconv.Itoa(collision))) % len(servers)
-			// when the file is already allocated
-			_, ok := master.FileTaskMap[fileClips[index]]
-			if !ok {
-				break
-			}
-			collision++
-		}
-		//fmt.Println(server)
-		master.FileTaskMap[fileClips[index]] = server
-		// generate the task
+	// for i, server := range servers {
+	// 	var index int
+	// 	var collision = 1
+	// 	for {
+	// 		// hash server Ip and get the index of fileClips
+	// 		index = int(Hash(server+strconv.Itoa(collision))) % len(servers)
+	// 		// when the file is already allocated
+	// 		_, ok := master.FileTaskMap[fileClips[index]]
+	// 		if !ok {
+	// 			break
+	// 		}
+	// 		collision++
+	// 	}
+	// 	//fmt.Println(server)
+	// 	master.FileTaskMap[fileClips[index]] = server
+	// 	// generate the task
+	// 	task := &Task{
+	// 		TaskNum:        i,
+	// 		RemoteFileName: fileClips[index],
+	// 		LocalFileName:  fileClips[index],
+	// 		Status:         "Allocated",
+	// 		TaskType:       "Maple",
+	// 		ServerIp:       server,
+	// 		SourceIp:       ChangeIPtoString(mjreq.SenderIp),
+	// 		LastTime:       timestamppb.Now(),
+	// 		ExecName:       mjreq.MapleExe,
+	// 	}
+	// 	// call server's RPC methods
+	// 	client, err := rpc.Dial("tcp", server+":"+config.RPCPORT)
+	// 	if err != nil {
+	// 		fmt.Println("Can't dial server RPC")
+	// 		return nil
+	// 	}
+	// 	fmt.Println(">>>Dial server " + server + "TaskNum")
+
+	// 	var mapleResults []string
+	// 	// better to use asynchronous call here- client.Go()
+	// 	// otherwise it will block the channel, then the whole system will be hanged
+	// 	err = client.Call("Server.MapleTask", task, &mapleResults)
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 		return nil
+	// 	}
+	// 	master.keyList = append(master.keyList, mapleResults...)
+
+	// }
+
+	for index, clip_name := range fileClips {
+		server := servers[index]
+
 		task := &Task{
-			TaskNum:        i,
+			TaskNum:        index,
 			RemoteFileName: fileClips[index],
 			LocalFileName:  fileClips[index],
 			Status:         "Allocated",
@@ -430,13 +469,16 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			LastTime:       timestamppb.Now(),
 			ExecName:       mjreq.MapleExe,
 		}
+
+		master.FileTaskMap[fileClips[index]] = server
+
 		// call server's RPC methods
 		client, err := rpc.Dial("tcp", server+":"+config.RPCPORT)
 		if err != nil {
 			fmt.Println("Can't dial server RPC")
 			return nil
 		}
-		fmt.Println(">>>Dial server " + server)
+		fmt.Println(">>>Dial server " + server + "TaskNum")
 
 		var mapleResults []string
 		// better to use asynchronous call here- client.Go()
@@ -447,8 +489,8 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			return nil
 		}
 		master.keyList = append(master.keyList, mapleResults...)
-
 	}
+
 	fmt.Println(getTimeString() + " Finish Maple!")
 
 	*reply = true

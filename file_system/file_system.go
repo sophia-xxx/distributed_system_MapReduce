@@ -485,7 +485,7 @@ func ReceiveFile(connection net.Conn) {
 	file_name_buff := make([]byte, 100)
 	connection.Read(file_name_buff)
 	filename := strings.Trim(string(file_name_buff), " ")
-
+	fmt.Println(filename)
 	// Create the file
 	new_file, err := os.Create(filename)
 	net_node.CheckError(err)
@@ -510,7 +510,6 @@ func ReceiveFile(connection net.Conn) {
 	}
 	// Now, write the rest of the file
 	io.Copy(new_file, connection)
-	fmt.Println(filename)
 }
 
 /*
