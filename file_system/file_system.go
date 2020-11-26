@@ -908,7 +908,7 @@ func GetLocalSyncWriter(filename string) *SyncWriter {
 // After Receiving a sdfs_intermediate_file, do the append
 func CreatAppendSdfsKeyFile(filename string) {
 	var target_sdfs_filename string
-	for i := len(filename) - 1; i >= 0; i++ {
+	for i := len(filename) - 1; i >= 0; i-- {
 		if filename[i] == '_' {
 			target_sdfs_filename = filename[0:i]
 			break
