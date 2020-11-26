@@ -11,13 +11,14 @@ import (
 	"strconv"
 	"strings"
 
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"mp3/detect_failures"
 	"mp3/file_system"
 	"mp3/join_and_leave"
 	"mp3/net_node"
 	pings "mp3/ping_protobuff"
+
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func run_udp(n *net_node.Node) {
@@ -118,7 +119,7 @@ func run_tcp(n *net_node.Node) {
 
 		// Putting the file
 		case "P_":
-			fmt.Printf("RECIEVING FILE")
+			fmt.Printf("RECEIVING FILE: ")
 			file_system.ReceiveFile(connection)
 
 		// Acknowledgeing that write has ended

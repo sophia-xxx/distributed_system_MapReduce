@@ -1,2 +1,3 @@
 put ./mj_exe/wc_simple_input test
+get test local_wc_input
 maple ./mj_exe/wc_maple 3 sdfs_intermediate_file_prefix_ local_wc_input
