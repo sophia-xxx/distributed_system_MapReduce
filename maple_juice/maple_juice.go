@@ -256,6 +256,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// read file clip, same as "get" command
 	node := mapleServer.NodeInfo
 	index := findIndexByIp(node, args.SourceIp)
+	keyFileMap := make(map[string]*os.File)
 	if index == -1 {
 		fmt.Println("Can't find source server!")
 		return nil
@@ -276,7 +277,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		return nil
 	}
 	// scan the "result" file by line to map and using this map to output file
-	keyFileMap := make(map[string]*os.File)
+
 	err = splitMapleResultFile(resultFileName, args.TaskNum, keyFileMap)
 	if err != nil {
 		fmt.Println(err)
@@ -370,7 +371,7 @@ func NewMaster(n *net_node.Node) *Master {
 		NodeInfo:    n,
 		FileTaskMap: make(map[string]string),
 		TaskMap:     make(map[string]Task),
-		keyList:     make([]string, 1),
+		//keyList:     make([]string, 1),
 	}
 	return newMaster
 }
