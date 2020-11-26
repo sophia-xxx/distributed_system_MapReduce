@@ -36,7 +36,7 @@ func split(fileName string, clipNum int) map[int]string {
 	}
 	defer file.Close()
 	// debug
-	fileInto, err := os.Stat(fileName)
+	fileInto, err := os.Stat("./" + fileName)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -98,19 +98,20 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 	// get sdfs_src_file
 
 	file_system.GetFile(n, sdfsFileName, localFileName)
-	//time.Sleep(config.GETFILEWAIT)
+	time.Sleep(config.GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(localFileName) {
 		fmt.Println("Can't get the file:  " + sdfsFileName + ". Check the Internet!")
 		return nil
 	}
 	// debug
-	fileInto, err := os.Stat(localFileName)
+	fileInto, err := os.Stat("./" + localFileName)
 	if err != nil {
 		fmt.Println(err)
 		return nil
 	}
-	fmt.Println("File size:", fileInto.Size())
+	fmt.Println(fileInto.Name()+" file size:", fileInto.Size())
+
 	fmt.Println(">>Start clipping files")
 	fileClips = split(localFileName, mapleNum)
 	fmt.Println(">>Finish clipping files")
