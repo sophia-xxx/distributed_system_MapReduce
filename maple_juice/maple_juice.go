@@ -35,6 +35,14 @@ func split(fileName string, clipNum int) map[int]string {
 		fmt.Println("Can't open file!")
 	}
 	defer file.Close()
+	// debug
+	fileInto, err := os.Stat(fileName)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	fmt.Println(fileInto.Name()+": ", fileInto.Size())
+
 	fileScanner := bufio.NewScanner(file)
 	lineCount := 0
 	for fileScanner.Scan() {
@@ -89,13 +97,20 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 	fileClips := make(map[int]string, mapleNum)
 	// get sdfs_src_file
 
-	go file_system.GetFile(n, sdfsFileName, localFileName)
-	time.Sleep(config.GETFILEWAIT)
+	file_system.GetFile(n, sdfsFileName, localFileName)
+	//time.Sleep(config.GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(localFileName) {
 		fmt.Println("Can't get the file:  " + sdfsFileName + ". Check the Internet!")
 		return nil
 	}
+	// debug
+	fileInto, err := os.Stat(localFileName)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	fmt.Println("File size:", fileInto.Size())
 	fmt.Println(">>Start clipping files")
 	fileClips = split(localFileName, mapleNum)
 	fmt.Println(">>Finish clipping files")
