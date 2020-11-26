@@ -8,6 +8,7 @@ import (
 	"mp3/config"
 	"mp3/file_system"
 	"mp3/net_node"
+	pings "mp3/ping_protobuff"
 	"net"
 	"net/rpc"
 	"os"
@@ -28,12 +29,20 @@ var TimeFormat = "2006-01-02 15:04:05"
 func split(fileName string, clipNum int) map[int]string {
 	fileClips := make(map[int]string, clipNum)
 	// read lines of file
-	execPath, _ := os.Getwd()
-	file, err := os.Open(execPath + "/" + fileName)
+	//execPath, _ := os.Getwd()
+	file, err := os.Open(fileName)
 	if err != nil {
 		fmt.Println("Can't open file!")
 	}
 	defer file.Close()
+	// debug
+	fileInto, err := os.Stat(fileName)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	fmt.Println(fileInto.Name()+": ", fileInto.Size())
+
 	fileScanner := bufio.NewScanner(file)
 	lineCount := 0
 	for fileScanner.Scan() {
@@ -45,7 +54,7 @@ func split(fileName string, clipNum int) map[int]string {
 	// split file into file clips, then generate list of fileNames
 	splitLines := lineCount/clipNum + 1
 	// re-open the file
-	file, _ = os.Open(execPath + "/" + fileName)
+	file, _ = os.Open(fileName)
 	fileScanner = bufio.NewScanner(file)
 	// determine whether the file is end
 	endScan := false
@@ -53,7 +62,7 @@ func split(fileName string, clipNum int) map[int]string {
 	for fileScanner.Scan() {
 		var fileSplit *os.File
 		// create new files for different file clips
-		fileSplit, _ = os.Create("./" + config.CLIPPREFIX + strconv.Itoa(count))
+		fileSplit, _ = os.Create(config.CLIPPREFIX + strconv.Itoa(count))
 		defer fileSplit.Close()
 		for i := 0; i < splitLines-1; i++ {
 			line := fileScanner.Text()
@@ -69,6 +78,8 @@ func split(fileName string, clipNum int) map[int]string {
 		// last line
 		line := fileScanner.Text()
 		fileSplit.WriteString(line + "\n")
+		// add to fileClip map
+		fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
 		// check whether this write successfully
 		fileInfo, _ := fileSplit.Stat()
 		//fileClips[count] = CLIPPREFIX + strconv.Itoa(count)
@@ -83,16 +94,24 @@ func split(fileName string, clipNum int) map[int]string {
 client split the whole sdfs_src_file and generate file clips
 */
 func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileName string) map[int]string {
-	fileClips := make(map[int]string, mapleNum)
+	var fileClips map[int]string
 	// get sdfs_src_file
 
-	go file_system.GetFile(n, sdfsFileName, localFileName)
-	time.Sleep(config.GETFILEWAIT)
+	//file_system.GetFile(n, sdfsFileName, localFileName)
+	//time.Sleep(config.GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(localFileName) {
 		fmt.Println("Can't get the file:  " + sdfsFileName + ". Check the Internet!")
 		return nil
 	}
+	// debug
+	fileInto, err := os.Stat(localFileName)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	fmt.Println(fileInto.Name()+" file size:", fileInto.Size())
+
 	fmt.Println(">>Start clipping files")
 	fileClips = split(localFileName, mapleNum)
 	fmt.Println(">>Finish clipping files")
@@ -280,7 +299,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 
 	}
 	// get all keys and return list
-	list := make([]string, 10)
+	var list []string
 	for key := range keyFileMap {
 		list = append(list, key)
 	}
@@ -348,7 +367,7 @@ func NewMaster(n *net_node.Node) *Master {
 		NodeInfo:    n,
 		FileTaskMap: make(map[string]string),
 		TaskMap:     make(map[string]Task),
-		keyList:     make([]string, 10),
+		keyList:     make([]string, 1),
 	}
 	return newMaster
 }
@@ -359,9 +378,15 @@ master rpc method to start MapleJuice
 func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	// get all potential servers
 	members := mjreq.NodeInfo.Table
-	servers := make([]string, 10)
+	//aviMembers := getAllAviMember(mjreq.NodeInfo)
+	//if len(aviMembers) == 0 {
+	//	fmt.Println("No available servers!!")
+	//	return nil
+	//}
+	var servers []string
 	for _, member := range members {
 		IPString := ChangeIPtoString(member.Address.Ip)
+		//fmt.Println(IPString)
 		if strings.Compare(IPString, config.MASTERIP) != 0 {
 			servers = append(servers, IPString)
 		}
@@ -370,6 +395,8 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		fmt.Println("There is no available servers!")
 		return nil
 	}
+	//fmt.Println(servers)
+
 	fileClips := mjreq.FileClip
 	// schedule the maple tasks
 	for i, server := range servers {
@@ -385,13 +412,13 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			}
 			collision++
 		}
-
+		//fmt.Println(server)
 		master.FileTaskMap[fileClips[index]] = server
 		// generate the task
 		task := &Task{
 			TaskNum:        i,
-			RemoteFileName: master.FileTaskMap[fileClips[index]],
-			LocalFileName:  master.FileTaskMap[fileClips[index]],
+			RemoteFileName: fileClips[index],
+			LocalFileName:  fileClips[index],
 			Status:         "Allocated",
 			TaskType:       "Maple",
 			ServerIp:       server,
@@ -400,15 +427,17 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			ExecName:       mjreq.MapleExe,
 		}
 		// call server's RPC methods
-		client, err := rpc.Dial("tcp", task.ServerIp+":"+config.RPCPORT)
+		client, err := rpc.Dial("tcp", server+":"+config.RPCPORT)
 		if err != nil {
 			fmt.Println("Can't dial server RPC")
 			return nil
 		}
-		mapleResults := make([]string, 10)
+		fmt.Println(">>>Dial server " + server)
+
+		var mapleResults []string
 		// better to use asynchronous call here- client.Go()
 		// otherwise it will block the channel, then the whole system will be hanged
-		err = client.Call("MJServer.MapleTask", task, &mapleResults)
+		err = client.Call("Server.MapleTask", task, &mapleResults)
 		if err != nil {
 			fmt.Println(err)
 			return nil
@@ -427,7 +456,11 @@ master start listening RPC call
 */
 func StartMasterRpc(master *Master) {
 	rpc.Register(master)
-	listener, _ := net.Listen("tcp", ":"+config.RPCPORT)
+	listener, err := net.Listen("tcp", ":"+config.RPCPORT)
+	if err != nil {
+		fmt.Println("Can't start master RPC!")
+		return
+	}
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -519,11 +552,28 @@ func findIndexByIp(n *net_node.Node, ip string) int {
 	return index
 }
 
+func getAllAviMember(node *net_node.Node) []*pings.TableEntryProto {
+	var aviMember []*pings.TableEntryProto
+	for _, member := range node.Table {
+		if member.Status == net_node.FAIL|net_node.FAILED|net_node.LEAVING {
+			continue
+		}
+		aviMember = append(aviMember, member)
+	}
+	fmt.Println(len(aviMember), " available members. ")
+	return aviMember
+}
+
 // server using hash function to determine the target server to merge all the files for a certain key
 // It also means that the target node will store the sdfs_prefix_key file
 func determineIndex(node *net_node.Node, key string) int {
-	var members = make([]string, 10)
+	var members []string
 	var finalIndex = -1
+	//aviMember := getAllAviMember(node)
+	//if len(aviMember) == 0 {
+	//	fmt.Println("No available servers!")
+	//	return -1
+	//}
 	for _, node := range node.Table {
 		if strings.Compare(ChangeIPtoString(node.Address.Ip), config.MASTERIP) == 0 {
 			continue
