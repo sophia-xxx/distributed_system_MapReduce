@@ -30,13 +30,13 @@ func split(fileName string, clipNum int) map[int]string {
 	fileClips := make(map[int]string, clipNum)
 	// read lines of file
 	//execPath, _ := os.Getwd()
-	file, err := os.Open("./" + fileName)
+	file, err := os.Open(fileName)
 	if err != nil {
 		fmt.Println("Can't open file!")
 	}
 	defer file.Close()
 	// debug
-	fileInto, err := os.Stat("./" + fileName)
+	fileInto, err := os.Stat(fileName)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -54,7 +54,7 @@ func split(fileName string, clipNum int) map[int]string {
 	// split file into file clips, then generate list of fileNames
 	splitLines := lineCount/clipNum + 1
 	// re-open the file
-	file, _ = os.Open("./" + fileName)
+	file, _ = os.Open(fileName)
 	fileScanner = bufio.NewScanner(file)
 	// determine whether the file is end
 	endScan := false
@@ -62,7 +62,7 @@ func split(fileName string, clipNum int) map[int]string {
 	for fileScanner.Scan() {
 		var fileSplit *os.File
 		// create new files for different file clips
-		fileSplit, _ = os.Create("./" + config.CLIPPREFIX + strconv.Itoa(count))
+		fileSplit, _ = os.Create(config.CLIPPREFIX + strconv.Itoa(count))
 		defer fileSplit.Close()
 		for i := 0; i < splitLines-1; i++ {
 			line := fileScanner.Text()
@@ -97,7 +97,7 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 	fileClips := make(map[int]string, mapleNum)
 	// get sdfs_src_file
 
-	//file_system.GetFile(n, sdfsFileName, localFileName)
+	file_system.GetFile(n, sdfsFileName, localFileName)
 	time.Sleep(config.GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(localFileName) {
@@ -105,7 +105,7 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 		return nil
 	}
 	// debug
-	fileInto, err := os.Stat("./" + localFileName)
+	fileInto, err := os.Stat(localFileName)
 	if err != nil {
 		fmt.Println(err)
 		return nil
