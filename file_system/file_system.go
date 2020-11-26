@@ -536,7 +536,7 @@ func SendFile(n *net_node.Node, connection net.Conn) {
 	// Determine if the file we are putting actually exists
 	f, err := os.Stat(local_filepath)
 	if os.IsNotExist(err) {
-		fmt.Println(local_filepath, "does not exist")
+		fmt.Println(local_filepath, "does not exist, cant send this file")
 		return
 	}
 	file_size := f.Size()
@@ -587,7 +587,7 @@ func DuplicateFile(n *net_node.Node, filename string, send_to_idx int32) {
 	// First, determine if the file we are putting actually exists
 	f, err := os.Stat(filename)
 	if os.IsNotExist(err) {
-		fmt.Println(filename, "does not exist")
+		fmt.Println(filename, "does not exist ,cant duplicate this file")
 		return
 	}
 	file_size := f.Size()
@@ -770,7 +770,7 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 
 	f, err := os.Stat(local_filepath)
 	if os.IsNotExist(err) {
-		fmt.Println(local_filepath, "does not exist")
+		fmt.Println(local_filepath, "does not exist, cant put this file")
 		return
 	}
 	file_size := f.Size()
@@ -804,7 +804,7 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 func GetFile(n *net_node.Node, filename string, local_filepath string) {
 	// Check if the file exists
 	if _, ok := n.Files[filename]; !ok {
-		fmt.Println(filename, "does not exist")
+		fmt.Println(filename, "does not exist, cant get this file")
 		return
 	}
 
