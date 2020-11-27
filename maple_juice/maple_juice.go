@@ -383,14 +383,14 @@ master rpc method to start MapleJuice
 */
 func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	// get all potential servers
-	members := mjreq.NodeInfo.Table
-	//aviMembers := getAllAviMember(mjreq.NodeInfo)
-	//if len(aviMembers) == 0 {
-	//	fmt.Println("No available servers!!")
-	//	return nil
-	//}
+	//members := mjreq.NodeInfo.Table
+	aviMembers := getAllAviMember(mjreq.NodeInfo)
+	if len(aviMembers) == 0 {
+		fmt.Println("No available servers!!")
+		return nil
+	}
 	var servers []string
-	for _, member := range members {
+	for _, member := range aviMembers {
 		IPString := ChangeIPtoString(member.Address.Ip)
 		//fmt.Println(IPString)
 		if strings.Compare(IPString, config.MASTERIP) != 0 {
@@ -598,13 +598,13 @@ func findIndexByIp(n *net_node.Node, ip string) int {
 	return index
 }
 
+// server get all active member in member lists
 func getAllAviMember(node *net_node.Node) []*pings.TableEntryProto {
 	var aviMember []*pings.TableEntryProto
 	for _, member := range node.Table {
-		if member.Status == net_node.FAIL|net_node.FAILED|net_node.LEAVING {
-			continue
+		if member.Status == net_node.ACTIVE|net_node.JOINED {
+			aviMember = append(aviMember, member)
 		}
-		aviMember = append(aviMember, member)
 	}
 	fmt.Println(len(aviMember), " available members. ")
 	return aviMember
@@ -615,11 +615,11 @@ func getAllAviMember(node *net_node.Node) []*pings.TableEntryProto {
 func determineIndex(node *net_node.Node, key string) int {
 	var members []string
 	var finalIndex = -1
-	//aviMember := getAllAviMember(node)
-	//if len(aviMember) == 0 {
-	//	fmt.Println("No available servers!")
-	//	return -1
-	//}
+	aviMember := getAllAviMember(node)
+	if len(aviMember) == 0 {
+		fmt.Println("No available servers!")
+		return -1
+	}
 	for _, node := range node.Table {
 		if strings.Compare(ChangeIPtoString(node.Address.Ip), config.MASTERIP) == 0 {
 			continue
