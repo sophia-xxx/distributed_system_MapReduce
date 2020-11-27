@@ -520,8 +520,9 @@ func (master *Master) Shuffle(keyList []string, servers []string, serverTaskMap 
 		for _, key := range keyList {
 			if len(serverTaskMap[servers[serverIndex]]) <= keyNum {
 				serverTaskMap[servers[serverIndex]] = append(serverTaskMap[servers[serverIndex]], config.FILEPREFIX+key)
+			} else {
+				serverIndex++
 			}
-			serverIndex++
 		}
 	}
 	//todo: return or???
