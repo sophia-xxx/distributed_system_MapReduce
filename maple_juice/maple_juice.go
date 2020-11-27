@@ -131,7 +131,7 @@ client start MapleJuice
 // maple maple_exe num_maple sdfs_intermediate sdfs_src
 // and call master to start schedule tasks
 
-func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int, sdfsSrcFile string) {
+func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int, sdfs_intermediate_filename_prefix string, sdfsSrcFile string) {
 	// set connection with master RPC
 	var reply bool
 	files := splitFile(n, mapleNum, sdfsSrcFile, sdfsSrcFile)
@@ -142,10 +142,37 @@ func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int,
 	}
 	// call master RPC
 	args := &MJReq{
-		WorkType: workType,
-		MapleExe: mapleExe,
-		MapleNum: mapleNum,
-		FileClip: files,
+		WorkType:      workType,
+		MapleExe:      mapleExe,
+		MapleJuiceNum: mapleNum,
+		SDFSPREFIX:    sdfs_intermediate_filename_prefix,
+		FileClip:      files,
+		SenderIp:      n.Address.IP,
+		NodeInfo:      n,
+	}
+	if err := client.Call("Master.StartMapleJuice", args, &reply); err != nil {
+		fmt.Println("Can't start MapleJuice!")
+		return
+	}
+	fmt.Println(getTimeString() + " Start Maple!")
+
+}
+
+//juice <juice_exe> <num_juices> <sdfs_intermediate_filename_prefix> <sdfs_dest_filename> delete_input={0,1}
+func CallJuice(n *net_node.Node, workType string, juiceExe string, juiceNum int, sdfs_intermediate_filename_prefix string, sdfsDestFilename string, deleteOrNot string) {
+	var reply bool
+	client, err := rpc.Dial("tcp", config.MASTERIP+":"+config.RPCPORT)
+	if err != nil {
+		fmt.Println("Can't set connection with remote process!(During CallJuice)")
+		return
+	}
+
+	// call master RPC
+	args := &MJReq{
+		WorkType:      workType,
+		MapleExe:      juiceExe,
+		MapleJuiceNum: mapleNum,
+		//FileClip:      files,
 		SenderIp: n.Address.IP,
 		NodeInfo: n,
 	}
@@ -154,7 +181,6 @@ func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int,
 		return
 	}
 	fmt.Println(getTimeString() + " Start Maple!")
-
 }
 
 /*****************************For server RPC********************************/
@@ -169,6 +195,7 @@ type Task struct {
 	RemoteFileName string
 	LocalFileName  string
 	ExecName       string
+	SDFSPREFIX     string
 	Status         string //TODO: do we need status to keep record of task status???
 	TaskType       string //"maple"/"juice"
 	ServerIp       string // server in charge of this task
@@ -288,7 +315,8 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	}
 	// send file to target node to merge
 	for key := range keyFileMap {
-		local_file_path := config.FILEPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
+		//local_file_path := config.FILEPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
+		local_file_path := Task.SDFSPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
 		f, _ := os.Stat(local_file_path)
 		// find the target node to merge and store the sdfs_prefix_key file
 		targetIndex := determineIndex(node, key)
@@ -300,7 +328,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		if targetIndex == int(node.Index) {
 			file_system.CreatAppendSdfsKeyFile(local_file_path)
 		} else {
-			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size())
+			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size(), Task.SDFSPREFIX, true)
 		}
 
 	}
@@ -360,12 +388,13 @@ type Master struct {
 
 // define master rpc para
 type MJReq struct {
-	WorkType string
-	MapleExe string
-	MapleNum int
-	FileClip map[int]string
-	SenderIp net.IP
-	NodeInfo *net_node.Node
+	WorkType      string
+	MapleExe      string
+	MapleJuiceNum int
+	SDFSPREFIX    string
+	FileClip      map[int]string
+	SenderIp      net.IP
+	NodeInfo      *net_node.Node
 }
 
 // master keep record of all maple/reduce tasks
@@ -441,6 +470,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			SourceIp:       ChangeIPtoString(mjreq.SenderIp),
 			LastTime:       timestamppb.Now(),
 			ExecName:       mjreq.MapleExe,
+			SDFSPREFIX:     mjreq.SDFSPREFIX,
 		}
 
 		master.FileTaskMap[server] = append(master.FileTaskMap[server], fileClips[index])
@@ -473,15 +503,15 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 /*
 Master start Juice phase
 */
-func (master *Master) startJuice(mjreq MJReq, partition string, servers []string) {
-	// reassign reduce task
-	// fill fileTaskMap [serverIp] []intermediateFileName
-	master.FileTaskMap = make(map[string][]string)
-	master.Shuffle(master.keyList, servers, master.FileTaskMap, partition)
-	// generate Juice task
-	// call Juice RPC
+// func (master *Master) startJuice(mjreq MJReq, partition string, servers []string) {
+// 	// reassign reduce task
+// 	// fill fileTaskMap [serverIp] []intermediateFileName
+// 	master.FileTaskMap = make(map[string][]string)
+// 	master.Shuffle(master.keyList, servers, master.FileTaskMap, partition)
+// 	// generate Juice task
+// 	// call Juice RPC
 
-}
+// }
 
 /*
 master start listening RPC call

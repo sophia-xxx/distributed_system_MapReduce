@@ -120,7 +120,12 @@ func run_tcp(n *net_node.Node) {
 		// Putting the file
 		case "P_":
 			fmt.Printf("RECEIVING FILE: ")
-			file_system.ReceiveFile(connection)
+			file_system.ReceiveFile(connection, false)
+
+		// Putting the file that required to be appended by mapleJuice
+		case "PA":
+			fmt.Printf("RECEIVING FILE(Needed appebd): ")
+			file_system.ReceiveFile(connection, true)
 
 		// Acknowledgeing that write has ended
 		case "WE":
@@ -306,7 +311,13 @@ func execute_store_command(node *net_node.Node, args []string, node_active bool)
 func excute_maple_command(node *net_node.Node, args []string) {
 	//initMapleJuice(server, master, node)
 	mapleNum, _ := strconv.Atoi(args[2])
-	maple_juice.CallMaple(node, args[0], args[1], mapleNum, args[4])
+	maple_juice.CallMaple(node, args[0], args[1], mapleNum, args[3], args[4])
+}
+
+func excute_juice_command(node *net_node.Node, args []string){
+	//juice <juice_exe> <num_juices> <sdfs_intermediate_filename_prefix> <sdfs_dest_filename> delete_input={0,1}
+	juiceNum, _ := strconv.Atoi(args[2])
+	maple_juice.CallJuice(node, args[0], args[1], juiceNum, args[3], args[4], args[5])
 }
 
 func CLI() {

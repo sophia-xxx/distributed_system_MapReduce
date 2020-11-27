@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"mp3/config"
 	"net"
 	"os"
 	"strconv"
@@ -82,7 +81,7 @@ func MergeFileList(n *net_node.Node, msg *pings.TableMessasgeProto) {
  * File send Protocol:
  * P_[file_size][filename][file_data]
  */
-func Send_file_tcp(n *net_node.Node, server_index int32, local_filepath string, filename string, file_size int64) {
+func Send_file_tcp(n *net_node.Node, server_index int32, local_filepath string, filename string, file_size int64, sdfs_prefix string, need_append bool) {
 	// Open a TCP connection
 	remote_addr := net_node.ConvertToAddr(n.Table[server_index].Address)
 	remote_tcp_addr := net_node.ConvertUDPToTCP(*remote_addr)
@@ -93,7 +92,12 @@ func Send_file_tcp(n *net_node.Node, server_index int32, local_filepath string, 
 	// Now, send over the file metadata
 	file_size_str := fmt.Sprintf("%10d", file_size)
 	filename_str := fmt.Sprintf("%100s", filename)
-	first_line := []byte("P_" + file_size_str + filename_str)
+	sdfsPrefix_str := fmt.Sprintf("%100s", sdfs_prefix) //might have a problem
+	if need_append {
+		first_line := []byte("PA" + file_size_str + filename_str + sdfs_prefix)
+	} else {
+		first_line := []byte("P_" + file_size_str + filename_str + sdfs_prefix)
+	}
 	conn.Write(first_line)
 
 	// Send the file over 16,384 bytes at a time
@@ -172,7 +176,7 @@ func send_file_to_servers(n *net_node.Node, file_server_indices []int32, local_f
 		} else if uint32(server_index) == n.Index {
 			write_file_locally(local_filepath, filename)
 		} else {
-			Send_file_tcp(n, server_index, local_filepath, filename, file_size)
+			Send_file_tcp(n, server_index, local_filepath, filename, file_size, "", false)
 		}
 	}
 }
@@ -474,7 +478,7 @@ func ReceiveFileReadCompleteMsg(n *net_node.Node, connection net.Conn) {
 /*
  * Receives a file from another TCP server and writes it to a local file
  */
-func ReceiveFile(connection net.Conn) {
+func ReceiveFile(connection net.Conn, need_append bool) {
 	// Get the file size
 	file_size_buff := make([]byte, 10)
 	connection.Read(file_size_buff)
@@ -486,6 +490,15 @@ func ReceiveFile(connection net.Conn) {
 	connection.Read(file_name_buff)
 	filename := strings.Trim(string(file_name_buff), " ")
 	fmt.Println(filename)
+
+	//Now, get the sdfs prefix
+	sdfsPrefix_buff := make([]byte, 100)
+	connection.Read(sdfsPrefix_buff)
+	sdfsPrefix_str := strings.Trim(string(sdfsPrefix_buff), " ")
+	if sdfsPrefix_str != "" {
+		fmt.Println("With Prefix: " + sdfsPrefix_str)
+	}
+
 	// Create the file
 	new_file, err := os.Create(filename)
 	net_node.CheckError(err)
@@ -502,10 +515,12 @@ func ReceiveFile(connection net.Conn) {
 	}
 	data := buff[:num_bytes_read]
 	new_file.Write(data)
-	if len(filename) >= len(config.FILEPREFIX) {
-		file_name_prefix := filename[0:len(config.FILEPREFIX)]
-		if file_name_prefix == config.FILEPREFIX {
-			CreatAppendSdfsKeyFile(filename)
+	if need_append {
+		if len(filename) >= len(sdfsPrefix_str) {
+			file_name_prefix := filename[0:len(sdfsPrefix_str)]
+			if file_name_prefix == sdfsPrefix_str {
+				CreatAppendSdfsKeyFile(filename)
+			}
 		}
 	}
 	// Now, write the rest of the file
@@ -541,7 +556,7 @@ func SendFile(n *net_node.Node, connection net.Conn) {
 	}
 	file_size := f.Size()
 
-	Send_file_tcp(n, server_index, local_filepath, filename, file_size)
+	Send_file_tcp(n, server_index, local_filepath, filename, file_size, "", false)
 }
 
 func in_server_list(n *net_node.Node, servers []int32) bool {
@@ -598,7 +613,7 @@ func DuplicateFile(n *net_node.Node, filename string, send_to_idx int32) {
 
 	acquire_distributed_write_lock(n, filename)
 
-	Send_file_tcp(n, send_to_idx, filename, filename, file_size)
+	Send_file_tcp(n, send_to_idx, filename, filename, file_size, "", false)
 
 	// Send a message to the remaining servers that the file has been put
 	servers := n.Files[filename].Servers
