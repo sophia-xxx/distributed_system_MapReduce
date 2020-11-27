@@ -145,7 +145,7 @@ func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int,
 		WorkType:      workType,
 		MapleExe:      mapleExe,
 		MapleJuiceNum: mapleNum,
-		SDFSPREFIX:    sdfs_intermediate_filename_prefix,
+		SdfsPrefix:    sdfs_intermediate_filename_prefix,
 		FileClip:      files,
 		SenderIp:      n.Address.IP,
 		NodeInfo:      n,
@@ -171,7 +171,7 @@ func CallJuice(n *net_node.Node, workType string, juiceExe string, juiceNum int,
 	args := &MJReq{
 		WorkType:      workType,
 		MapleExe:      juiceExe,
-		MapleJuiceNum: mapleNum,
+		MapleJuiceNum: juiceNum,
 		//FileClip:      files,
 		SenderIp: n.Address.IP,
 		NodeInfo: n,
@@ -195,7 +195,7 @@ type Task struct {
 	RemoteFileName string
 	LocalFileName  string
 	ExecName       string
-	SDFSPREFIX     string
+	SdfsPrefix     string
 	Status         string //TODO: do we need status to keep record of task status???
 	TaskType       string //"maple"/"juice"
 	ServerIp       string // server in charge of this task
@@ -316,7 +316,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// send file to target node to merge
 	for key := range keyFileMap {
 		//local_file_path := config.FILEPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
-		local_file_path := Task.SDFSPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
+		local_file_path := args.SdfsPrefix + key + "_" + strconv.Itoa(args.TaskNum)
 		f, _ := os.Stat(local_file_path)
 		// find the target node to merge and store the sdfs_prefix_key file
 		targetIndex := determineIndex(node, key)
@@ -328,7 +328,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		if targetIndex == int(node.Index) {
 			file_system.CreatAppendSdfsKeyFile(local_file_path)
 		} else {
-			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size(), Task.SDFSPREFIX, true)
+			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size(), args.SdfsPrefix, true)
 		}
 
 	}
@@ -391,7 +391,7 @@ type MJReq struct {
 	WorkType      string
 	MapleExe      string
 	MapleJuiceNum int
-	SDFSPREFIX    string
+	SdfsPrefix    string
 	FileClip      map[int]string
 	SenderIp      net.IP
 	NodeInfo      *net_node.Node
@@ -470,7 +470,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			SourceIp:       ChangeIPtoString(mjreq.SenderIp),
 			LastTime:       timestamppb.Now(),
 			ExecName:       mjreq.MapleExe,
-			SDFSPREFIX:     mjreq.SDFSPREFIX,
+			SdfsPrefix:     mjreq.SdfsPrefix,
 		}
 
 		master.FileTaskMap[server] = append(master.FileTaskMap[server], fileClips[index])
