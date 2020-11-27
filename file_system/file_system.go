@@ -924,9 +924,17 @@ func GetLocalSyncWriter(filename string) *SyncWriter {
 func CreatAppendSdfsKeyFile(filename string) {
 	var target_sdfs_filename string
 	for i := len(filename) - 1; i >= 0; i-- {
-		if filename[i] == '_' {
-			target_sdfs_filename = filename[0:i]
-			break
+		if filename[i] == '_' { //extra for reduce append
+			if filename[i+1:len(filename)] == "reduce" {
+				for j := 0; j < len(filename); j++ {
+					if filename[j] == '_' {
+						target_sdfs_filename = filename[0:j]
+					}
+				}
+			} else {
+				target_sdfs_filename = filename[0:i]
+				break
+			}
 		}
 	}
 	// _, err := os.Stat(target_sdfs_filename)
@@ -963,3 +971,8 @@ func CreatAppendSdfsKeyFile(filename string) {
 	}
 	wg.Wait()
 }
+
+// // After Receiving a sdfsPrefix_key_reduce file, do the append
+// func AppendReduceFile(filename string, DestFileName string){
+// 	var target_reduce_result string
+// }

@@ -397,6 +397,9 @@ func CLI() {
 		case strings.Compare(args[0], "maple") == 0:
 			excute_maple_command(node, args)
 
+		case srtings.Compare(args[0], "juice") == 0:
+			excute_juice_command(node, args)
+
 		// Invalid command
 		default:
 			printCLIHelp()
