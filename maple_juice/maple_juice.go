@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"hash/fnv"
+	"io/ioutil"
 	"log"
+	"math"
 	"mp3/config"
 	"mp3/file_system"
 	"mp3/net_node"
@@ -270,6 +272,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	}
 	// execute maple_exe
 	// get a "result" file after the maple_exe finished
+	// todo: can we change the name??
 	resultFileName := "maple_result"
 	err := executeMapleExe(args.ExecName, args.LocalFileName, resultFileName)
 	if err != nil {
@@ -295,7 +298,6 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		}
 		// server cannot send files to themselves
 		if targetIndex == int(node.Index) {
-			// todo:consider node may send file to itself in mapleTask
 			file_system.CreatAppendSdfsKeyFile(local_file_path)
 		} else {
 			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size())
@@ -346,8 +348,8 @@ func JuiceTask(fileList []string) {
 // define master interface
 type Master struct {
 	NodeInfo    *net_node.Node
-	FileTaskMap map[string]string // file->serverIp
-	TaskMap     map[string]Task   // file->Task
+	FileTaskMap map[string][]string // server->fileList
+	TaskMap     map[string]Task     // todo:file->Task  should we use it to deal with unfinished task???
 	keyList     []string
 }
 
@@ -369,7 +371,7 @@ Master init all variables
 func NewMaster(n *net_node.Node) *Master {
 	newMaster := &Master{
 		NodeInfo:    n,
-		FileTaskMap: make(map[string]string),
+		FileTaskMap: make(map[string][]string),
 		TaskMap:     make(map[string]Task),
 		//keyList:     make([]string, 1),
 	}
@@ -407,7 +409,6 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		return nil
 	}
 
-	// schedule the maple tasks
 	// for i, server := range servers {
 	// 	var index int
 	// 	var collision = 1
@@ -420,41 +421,8 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 	// 			break
 	// 		}
 	// 		collision++
-	// 	}
-	// 	//fmt.Println(server)
-	// 	master.FileTaskMap[fileClips[index]] = server
-	// 	// generate the task
-	// 	task := &Task{
-	// 		TaskNum:        i,
-	// 		RemoteFileName: fileClips[index],
-	// 		LocalFileName:  fileClips[index],
-	// 		Status:         "Allocated",
-	// 		TaskType:       "Maple",
-	// 		ServerIp:       server,
-	// 		SourceIp:       ChangeIPtoString(mjreq.SenderIp),
-	// 		LastTime:       timestamppb.Now(),
-	// 		ExecName:       mjreq.MapleExe,
-	// 	}
-	// 	// call server's RPC methods
-	// 	client, err := rpc.Dial("tcp", server+":"+config.RPCPORT)
-	// 	if err != nil {
-	// 		fmt.Println("Can't dial server RPC")
-	// 		return nil
-	// 	}
-	// 	fmt.Println(">>>Dial server " + server + "TaskNum")
 
-	// 	var mapleResults []string
-	// 	// better to use asynchronous call here- client.Go()
-	// 	// otherwise it will block the channel, then the whole system will be hanged
-	// 	err = client.Call("Server.MapleTask", task, &mapleResults)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		return nil
-	// 	}
-	// 	master.keyList = append(master.keyList, mapleResults...)
-
-	// }
-
+	// schedule the maple tasks
 	for index, _ := range fileClips {
 		server := servers[index]
 
@@ -470,7 +438,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			ExecName:       mjreq.MapleExe,
 		}
 
-		master.FileTaskMap[fileClips[index]] = server
+		master.FileTaskMap[server] = append(master.FileTaskMap[server], fileClips[index])
 
 		// call server's RPC methods
 		client, err := rpc.Dial("tcp", server+":"+config.RPCPORT)
@@ -478,7 +446,7 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			fmt.Println("Can't dial server RPC")
 			return nil
 		}
-		fmt.Println(">>>Dial server " + server + "TaskNum")
+		fmt.Println(">>>Dial server "+server+"  TaskNum: ", task.TaskNum)
 
 		var mapleResults []string
 		// better to use asynchronous call here- client.Go()
@@ -520,7 +488,46 @@ func StartMasterRpc(master *Master) {
 /*
 Master shuffle keys to generate N juice tasks
 */
-func shuffle() {
+// todo:before shuffle, should reassign fileMap list
+func Shuffle(keyList []string, servers []string, serverTaskMap map[string][]string, partition string) {
+	if strings.Compare(partition, "hash") == 0 {
+		for _, key := range keyList {
+			serverIndex := int(Hash(key)) % len(servers)
+			serverTaskMap[servers[serverIndex]] = append(serverTaskMap[servers[serverIndex]], config.FILEPREFIX+key)
+		}
+	}
+	if strings.Compare(partition, "range") == 0 {
+		keyNum := int(math.Ceil(float64(len(keyList)) / float64(len(servers))))
+		serverIndex := 0
+		for _, key := range keyList {
+			if len(serverTaskMap[servers[serverIndex]]) <= keyNum {
+				serverTaskMap[servers[serverIndex]] = append(serverTaskMap[servers[serverIndex]], config.FILEPREFIX+key)
+			}
+			serverIndex++
+		}
+	}
+	//todo: return or???
+}
+
+/*
+Server clean all intermediate file in sdfs, same as "delete" command
+*/
+func cleanIntermediateFiles() {
+	files, _ := ioutil.ReadDir("./")
+	for _, f := range files {
+		fileName := f.Name()
+		if len(fileName) == 0 {
+			continue
+		}
+		tempList := strings.Split(fileName, "_")
+		if strings.Compare(tempList[0], "sdfs") == 0 {
+			err := os.Remove(fileName)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+		}
+	}
 
 }
 
@@ -531,13 +538,6 @@ func HandleFailure(n *net_node.Node, failed_index int) {
 	// find failed server
 	// get the task of failed server
 	// add task into taskChannel
-
-}
-
-/*
-Master clean all intermediate file in sdfs, same as "delete" command
-*/
-func cleanAllFiles() {
 
 }
 
