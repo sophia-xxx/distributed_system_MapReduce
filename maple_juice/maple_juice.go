@@ -314,6 +314,22 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 }
 
 /*
+Server run Juice task
+*/
+func (mapleServer *Server) JuiceTask(args Task, replyKeyList *[]string) error {
+	//todo: have to deal with a list of fileName
+
+	// loop fileList
+	// todo: add intermediate file into sdfsFileTable
+	// read intermediate sdfs file
+	// execute juice_exe
+	// append results in localFile
+	// append results in sdfs_result_file, same as "put" command
+
+	return nil
+}
+
+/*
 Server start listening RPC call
 */
 func StartServerRPC(mapleServer *Server) {
@@ -331,17 +347,6 @@ func StartServerRPC(mapleServer *Server) {
 		}
 		go rpc.ServeConn(conn)
 	}
-}
-
-/*
-Server run juice task on file clip
-*/
-func JuiceTask(fileList []string) {
-	// loop fileList
-	// read intermediate sdfs file
-	// execute juice_exe
-	// append results in localFile
-	// append results in sdfs_result_file, same as "put" command
 }
 
 /**************************Master Function****************************/
@@ -449,8 +454,8 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		fmt.Println(">>>Dial server "+server+"  TaskNum: ", task.TaskNum)
 
 		var mapleResults []string
-		// better to use asynchronous call here- client.Go()
-		// otherwise it will block the channel, then the whole system will be hanged
+		// todo: better to use asynchronous call here- client.Go()
+		// todo: here we may need to deal with unfinished task then reassign it
 		err = client.Call("Server.MapleTask", task, &mapleResults)
 		if err != nil {
 			fmt.Println(err)
@@ -463,6 +468,19 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 
 	*reply = true
 	return nil
+}
+
+/*
+Master start Juice phase
+*/
+func (master *Master) startJuice(mjreq MJReq, partition string, servers []string) {
+	// reassign reduce task
+	// fill fileTaskMap [serverIp] []intermediateFileName
+	master.FileTaskMap = make(map[string][]string)
+	master.Shuffle(master.keyList, servers, master.FileTaskMap, partition)
+	// generate Juice task
+	// call Juice RPC
+
 }
 
 /*
@@ -489,7 +507,7 @@ func StartMasterRpc(master *Master) {
 Master shuffle keys to generate N juice tasks
 */
 // todo:before shuffle, should reassign fileMap list
-func Shuffle(keyList []string, servers []string, serverTaskMap map[string][]string, partition string) {
+func (master *Master) Shuffle(keyList []string, servers []string, serverTaskMap map[string][]string, partition string) {
 	if strings.Compare(partition, "hash") == 0 {
 		for _, key := range keyList {
 			serverIndex := int(Hash(key)) % len(servers)
