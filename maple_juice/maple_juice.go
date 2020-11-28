@@ -282,7 +282,7 @@ func splitMapleResultFile(resultFileName string, taskID int, of_map map[string]*
 		f, ok := of_map[key]
 		if !ok {
 			// todo: maybe need to change the name
-			append_file_name := sdfs_prefix + key + "_" + strconv.Itoa(taskID)
+			append_file_name := config.MAPLEFILEPREFIX + key + "_" + strconv.Itoa(taskID)
 			//f, err := os.OpenFile(append_file_name, os.O_RDONLY|os.O_CREATE|os.O_APPEND, 0666)
 			f, err := os.Create(append_file_name)
 			if err != nil {
@@ -343,7 +343,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// send file to target node to merge
 	for key := range keyFileMap {
 		//local_file_path := config.FILEPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
-		local_file_path := args.SDFSPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
+		local_file_path := config.MAPLEFILEPREFIX + key + "_" + strconv.Itoa(taskID)
 		f, _ := os.Stat(local_file_path)
 		// find the target node to merge and store the sdfs_prefix_key file
 		targetIndex := determineIndex(node, key)

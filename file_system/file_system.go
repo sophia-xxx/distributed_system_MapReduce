@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"mp3/config"
 	"mp3/net_node"
 	pings "mp3/ping_protobuff"
 
@@ -525,9 +526,9 @@ func ReceiveFile(connection net.Conn, need_append bool) {
 	data := buff[:num_bytes_read]
 	new_file.Write(data)
 	if need_append {
-		if len(filename) >= len(sdfsPrefix_str) {
-			file_name_prefix := filename[0:len(sdfsPrefix_str)]
-			if file_name_prefix == sdfsPrefix_str {
+		if len(filename) >= len(config.MAPLEFILEPREFIX) {
+			file_name_prefix := filename[0:len(config.MAPLEFILEPREFIX)]
+			if file_name_prefix == config.MAPLEFILEPREFIX {
 				CreatAppendSdfsKeyFile(filename)
 			}
 		}
