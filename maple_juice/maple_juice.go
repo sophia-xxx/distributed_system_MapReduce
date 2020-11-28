@@ -159,7 +159,7 @@ func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int,
 }
 
 //juice <juice_exe> <num_juices> <sdfs_intermediate_filename_prefix> <sdfs_dest_filename> delete_input={0,1}
-func CallJuice(n *net_node.Node, workType string, juiceExe string, juiceNum int, sdfs_intermediate_filename_prefix string, sdfsDestFilename string, deleteOrNot string) {
+func CallJuice(n *net_node.Node, workType string, juiceExe string, juiceNum int, sdfs_intermediate_filename_prefix string, sdfsDestFilename string, deleteOrNot string, partition string) {
 	var reply bool
 	client, err := rpc.Dial("tcp", config.MASTERIP+":"+config.RPCPORT)
 	if err != nil {
@@ -175,8 +175,9 @@ func CallJuice(n *net_node.Node, workType string, juiceExe string, juiceNum int,
 		SDFSPREFIX:    sdfs_intermediate_filename_prefix,
 		DestFileName:  sdfsDestFilename,
 		//FileClip:      files,
-		SenderIp: n.Address.IP,
-		NodeInfo: n,
+		SenderIp:  n.Address.IP,
+		NodeInfo:  n,
+		Partition: partition,
 	}
 	if err := client.Call("Master.startJuice", args, &reply); err != nil {
 		fmt.Println("Can't start MapleJuice - Juice!")
@@ -196,7 +197,7 @@ type Task struct {
 	TaskNum        int
 	RemoteFileName string
 	LocalFileName  string
-	JuiceFuleList  []string
+	JuiceFileList  []string
 	ExecName       string
 	SDFSPREFIX     string
 	DestFileName   string
@@ -325,7 +326,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	}
 	// scan the "result" file by line to map and using this map to output file
 
-	err = splitMapleResultFile(resultFileName, args.TaskNum, keyFileMap, Task.SDFSPREFIX)
+	err = splitMapleResultFile(resultFileName, args.TaskNum, keyFileMap, args.SDFSPREFIX)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -333,7 +334,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// send file to target node to merge
 	for key := range keyFileMap {
 		//local_file_path := config.FILEPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
-		local_file_path := Task.SDFSPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
+		local_file_path := args.SDFSPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
 		f, _ := os.Stat(local_file_path)
 		// find the target node to merge and store the sdfs_prefix_key file
 		targetIndex := determineIndex(node, key)
@@ -345,7 +346,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		if targetIndex == int(node.Index) {
 			file_system.CreatAppendSdfsKeyFile(local_file_path)
 		} else {
-			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size(), Task.SDFSPREFIX, true)
+			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size(), args.SDFSPREFIX, true)
 		}
 
 	}
@@ -361,15 +362,14 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 /*
 Server run Juice task
 */
-func (juiceServer *Server) JuiceTask(args Task, replyKeyList *[]string) error {
+func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 	node := juiceServer.NodeInfo
 
-	//todo: have to deal with a list of fileName
-	fileList := args.JuiceFuleList
+	fileList := args.JuiceFileList
 	// loop fileList
-	for i, keyfile := fileList {
+	for _, keyfile := range fileList {
 		local_key_filename := "Local_" + keyfile
-		go file_system.GetFile(node, keyfile, local_key_filename) //Is NodeInfo the net_node.node?
+		go file_system.GetFile(node, keyfile, local_key_filename)
 		//time.Sleep(config.GETFILEWAIT)
 
 		// check if we get the file
@@ -380,7 +380,7 @@ func (juiceServer *Server) JuiceTask(args Task, replyKeyList *[]string) error {
 		// execute juice_exe
 		// get a "result" file after the juice_exe finished
 		// name the result file as "local_" + keyFileName + "_reduce"
-		resultFileName := Task.DestFileName + "_" + local_key_filename + "_reduce"
+		resultFileName := args.DestFileName + "_" + local_key_filename + "_reduce"
 		err := executeJuiceExe(args.ExecName, local_key_filename, resultFileName)
 		if err != nil {
 			fmt.Println(err)
@@ -390,19 +390,19 @@ func (juiceServer *Server) JuiceTask(args Task, replyKeyList *[]string) error {
 		f, _ := os.Stat(resultFileName)
 
 		targetIndex := determineMasterIndex(node) //By default, send all reduce result to master
+		if targetIndex == -1 {
+			fmt.Println("Can't get master ip!")
+			return nil
+		}
 		if targetIndex == int(node.Index) {
 			file_system.CreatAppendSdfsKeyFile(resultFileName)
 		} else {
-			go file_system.Send_file_tcp(node, int32(targetIndex), resultFileName, resultFileName, f.Size(), Task.DestFileName, true)
+			go file_system.Send_file_tcp(node, int32(targetIndex), resultFileName, resultFileName, f.Size(), args.DestFileName, true)
 		}
 	}
 
 	// todo: add intermediate file into sdfsFileTable (Done at the end of Maple)
-	// read intermediate sdfs file
-	// execute juice_exe
-	// append results in localFile
-	// append results in sdfs_result_file, same as "put" command
-
+	*reply = true
 	return nil
 }
 
@@ -445,6 +445,7 @@ type MJReq struct {
 	FileClip      map[int]string
 	SenderIp      net.IP
 	NodeInfo      *net_node.Node
+	Partition     string
 }
 
 // master keep record of all maple/reduce tasks
@@ -553,7 +554,8 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 /*
 Master start Juice phase
 */
-func (master *Master) startJuice(mjreq MJReq, partition string, sdfs_prefix string) {
+
+func (master *Master) startJuice(mjreq MJReq, reply *bool) error {
 	// reassign reduce task
 	// fill fileTaskMap [serverIp] []intermediateFileName
 	aviMembers := getAllAviMember(mjreq.NodeInfo)
@@ -570,23 +572,24 @@ func (master *Master) startJuice(mjreq MJReq, partition string, sdfs_prefix stri
 		}
 	}
 	master.FileTaskMap = make(map[string][]string)
-	master.Shuffle(master.keyList, servers, master.FileTaskMap, partition, sdfs_prefix)
+	master.Shuffle(master.keyList, servers, master.FileTaskMap, mjreq.Partition, mjreq.SDFSPREFIX)
 	// generate Juice task
 	// call Juice RPC
+	count := 0
 	for ip, filelist := range master.FileTaskMap {
 		server := ip
 
 		task := &Task{
-			TaskNum:        ip,
-			Status:         "Allocated",
-			TaskType:       "Juice",
-			ServerIp:       server,
-			SourceIp:       ChangeIPtoString(mjreq.SenderIp),
-			LastTime:       timestamppb.Now(),
-			ExecName:       mjreq.MapleExe, //actually Juiceexe but decide not to change it now
-			SDFSPREFIX:     mjreq.SDFSPREFIX,
-			DestFileName:   mjreq.DestFileName,
-			JuiceFuleList:  filelist,
+			TaskNum:       count,
+			Status:        "Allocated",
+			TaskType:      "Juice",
+			ServerIp:      server,
+			SourceIp:      ChangeIPtoString(mjreq.SenderIp),
+			LastTime:      timestamppb.Now(),
+			ExecName:      mjreq.MapleExe, //actually Juice_exe but decide not to change it now
+			SDFSPREFIX:    mjreq.SDFSPREFIX,
+			DestFileName:  mjreq.DestFileName,
+			JuiceFileList: filelist,
 		}
 
 		// call server's RPC methods
@@ -605,7 +608,7 @@ func (master *Master) startJuice(mjreq MJReq, partition string, sdfs_prefix stri
 			fmt.Println(err)
 			return nil
 		}
-		//master.keyList = append(master.keyList, mapleResults...)
+		count++
 	}
 
 	fmt.Println(getTimeString() + " Finish Juice!")
@@ -802,4 +805,5 @@ func determineMasterIndex(node *net_node.Node) int {
 			return index
 		}
 	}
+	return -1
 }

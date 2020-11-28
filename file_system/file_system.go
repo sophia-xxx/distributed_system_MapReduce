@@ -89,14 +89,15 @@ func Send_file_tcp(n *net_node.Node, server_index int32, local_filepath string, 
 	net_node.CheckError(err)
 	defer conn.Close()
 
+	var first_line []byte
 	// Now, send over the file metadata
 	file_size_str := fmt.Sprintf("%10d", file_size)
 	filename_str := fmt.Sprintf("%100s", filename)
 	sdfsPrefix_str := fmt.Sprintf("%100s", sdfs_prefix) //might have a problem
 	if need_append {
-		first_line := []byte("PA" + file_size_str + filename_str + sdfs_prefix)
+		first_line = []byte("PA" + file_size_str + filename_str + sdfsPrefix_str)
 	} else {
-		first_line := []byte("P_" + file_size_str + filename_str + sdfs_prefix)
+		first_line = []byte("P_" + file_size_str + filename_str + sdfsPrefix_str)
 	}
 	conn.Write(first_line)
 

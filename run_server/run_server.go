@@ -314,10 +314,10 @@ func excute_maple_command(node *net_node.Node, args []string) {
 	maple_juice.CallMaple(node, args[0], args[1], mapleNum, args[3], args[4])
 }
 
-func excute_juice_command(node *net_node.Node, args []string){
-	//juice <juice_exe> <num_juices> <sdfs_intermediate_filename_prefix> <sdfs_dest_filename> delete_input={0,1}
+func excute_juice_command(node *net_node.Node, args []string) {
+	//juice <juice_exe> <num_juices> <sdfs_intermediate_filename_prefix> <sdfs_dest_filename> delete_input={0,1} partition="hash"/"range"
 	juiceNum, _ := strconv.Atoi(args[2])
-	maple_juice.CallJuice(node, args[0], args[1], juiceNum, args[3], args[4], args[5])
+	maple_juice.CallJuice(node, args[0], args[1], juiceNum, args[3], args[4], args[5], args[6])
 }
 
 func CLI() {
@@ -397,7 +397,7 @@ func CLI() {
 		case strings.Compare(args[0], "maple") == 0:
 			excute_maple_command(node, args)
 
-		case srtings.Compare(args[0], "juice") == 0:
+		case strings.Compare(args[0], "juice") == 0:
 			excute_juice_command(node, args)
 
 		// Invalid command
