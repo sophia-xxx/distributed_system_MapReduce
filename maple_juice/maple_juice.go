@@ -665,7 +665,7 @@ func (master *Master) Shuffle(keyList []string, servers []string, serverTaskMap 
 /*
 Server clean all intermediate file in sdfs, same as "delete" command
 */
-func cleanIntermediateFiles() {
+func cleanIntermediateFiles(sdfs_prefix string) {
 	files, _ := ioutil.ReadDir("./")
 	for _, f := range files {
 		fileName := f.Name()
@@ -673,7 +673,17 @@ func cleanIntermediateFiles() {
 			continue
 		}
 		tempList := strings.Split(fileName, "_")
+		// delete file split clips  CLIPPREFIX  = "sdfs_src_file_clip_"
 		if strings.Compare(tempList[0], "sdfs") == 0 {
+			err := os.Remove(fileName)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+		}
+		// delete sdfs_intermediate_prefix file
+		prefixString := strings.Join(tempList[:len(tempList)-2], "_")
+		if strings.Compare(prefixString, sdfs_prefix) == 0 {
 			err := os.Remove(fileName)
 			if err != nil {
 				fmt.Println(err)
