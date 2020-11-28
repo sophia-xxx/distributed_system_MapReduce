@@ -64,14 +64,14 @@ func split(fileName string, clipNum int) map[int]string {
 	for fileScanner.Scan() {
 		var fileSplit *os.File
 		// create new files for different file clips
-		fileSplit, _ = os.Create(config.CLIPPREFIX + strconv.Itoa(count))
+		fileSplit, _ = os.Create(config.CLIPPREFIX + "_" + strconv.Itoa(count))
 		defer fileSplit.Close()
 		for i := 0; i < splitLines-1; i++ {
 			line := fileScanner.Text()
 			fileSplit.WriteString(line + "\n")
 			if !fileScanner.Scan() {
 				endScan = true
-				fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
+				fileClips[count] = config.CLIPPREFIX + "_" + strconv.Itoa(count)
 				//fileInfo, _ := fileSplit.Stat()
 				//fmt.Println("File clip: ", fileInfo.Size())
 				break
@@ -84,7 +84,7 @@ func split(fileName string, clipNum int) map[int]string {
 		line := fileScanner.Text()
 		fileSplit.WriteString(line + "\n")
 		// add to fileClip map
-		fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
+		fileClips[count] = config.CLIPPREFIX + "_" + strconv.Itoa(count)
 		// check whether this write successfully
 		//fileInfo, _ := fileSplit.Stat()
 		//fileClips[count] = CLIPPREFIX + strconv.Itoa(count)
@@ -155,14 +155,14 @@ func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int,
 		return
 	}
 	fmt.Println(getTimeString() + " Start Maple!")
-	// got message from master, maple end, delete file clips
-	for {
-		time.Sleep(config.GETFILEWAIT)
-		if reply {
-			cleanIntermediateFiles(sdfs_intermediate_filename_prefix)
-			break
-		}
-	}
+	//todo: got message from master, maple end, delete file clips
+	//for {
+	//	time.Sleep(config.GETFILEWAIT)
+	//	if reply {
+	//		cleanIntermediateFiles(sdfs_intermediate_filename_prefix)
+	//		break
+	//	}
+	//}
 
 }
 
@@ -546,7 +546,8 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 	}
 
 	fmt.Println(getTimeString() + " Finish Maple!")
-	// send end message
+	// send end message to all members
+	// then they will put merged file to sdfs directory
 	sendEnd(master.NodeInfo, mjreq.SDFSPREFIX)
 
 	*reply = true
@@ -672,13 +673,13 @@ func cleanIntermediateFiles(sdfs_prefix string) {
 		}
 		tempList := strings.Split(fileName, "_")
 		// delete file split clips  CLIPPREFIX  = "sdfs_src_file_clip_"
-		if strings.Compare(tempList[0], "sdfs") == 0 {
-			err := os.Remove(fileName)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-		}
+		//if strings.Compare(tempList[0], "sdfs") == 0 {
+		//	err := os.Remove(fileName)
+		//	if err != nil {
+		//		fmt.Println(err)
+		//		return
+		//	}
+		//}
 		// delete sdfs_intermediate_prefix file
 		prefixString := strings.Join(tempList[:len(tempList)-1], "_")
 		if strings.Compare(prefixString, sdfs_prefix) == 0 {

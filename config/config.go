@@ -6,7 +6,9 @@ import (
 
 // ----------for MapleJuice-----------
 const (
-	CLIPPREFIX = "sdfs_src_file_clip_"
+	CLIPPREFIX      = "src_file_clip"
+	MAPLEFILEPREFIX = "maple_intermediate_file"
+	JUICEFILEPREFIX = "juice_intermediate_file"
 	//FILEPREFIX  = "sdfs_intermediate_file_prefix_"
 	RPCPORT     = "6016"
 	GETFILEWAIT = 3 * time.Second
