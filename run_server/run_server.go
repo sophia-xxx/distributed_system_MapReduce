@@ -164,6 +164,10 @@ func run_tcp(n *net_node.Node) {
 		// Delete command
 		case "D_":
 			file_system.CheckAndDelete(n, connection)
+
+		// maple end command
+		case "ED":
+			file_system.PutIntermediateFile(n, connection)
 		}
 
 		connection.Close()

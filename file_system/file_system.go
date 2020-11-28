@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -87,6 +88,10 @@ func Send_file_tcp(n *net_node.Node, server_index int32, local_filepath string, 
 	remote_tcp_addr := net_node.ConvertUDPToTCP(*remote_addr)
 	conn, err := net.DialTCP("tcp", nil, remote_tcp_addr)
 	net_node.CheckError(err)
+	if err != nil {
+		fmt.Println("Can't dial server.")
+		return
+	}
 	defer conn.Close()
 
 	var first_line []byte
@@ -980,3 +985,29 @@ func CreatAppendSdfsKeyFile(filename string) {
 // func AppendReduceFile(filename string, DestFileName string){
 // 	var target_reduce_result string
 // }
+
+// when node receive maple-end command
+// it will put the local file into sdfs directory
+func PutIntermediateFile(node *net_node.Node, connection net.Conn) {
+	sdfs_prefix_buff := make([]byte, 100)
+	connection.Read(sdfs_prefix_buff)
+	sdfs_prefix := strings.Trim(string(sdfs_prefix_buff), " ")
+
+	if len(sdfs_prefix) == 0 {
+		fmt.Println("Can't get the sdfs prefix")
+	}
+	files, _ := ioutil.ReadDir("./")
+	for _, f := range files {
+		fileName := f.Name()
+		if len(fileName) == 0 {
+			continue
+		}
+		tempList := strings.Split(fileName, "_")
+		prefixString := strings.Join(tempList[:len(tempList)-1], "_")
+		if strings.Compare(prefixString, sdfs_prefix) == 0 {
+			// put file into sdfs directory
+			go PutFile(node, fileName, fileName)
+		}
+	}
+
+}

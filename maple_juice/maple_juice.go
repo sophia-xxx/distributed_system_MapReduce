@@ -483,7 +483,7 @@ master rpc method to start MapleJuice
 func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 	// get all potential servers
 	//members := mjreq.NodeInfo.Table
-	aviMembers := getAllAviMember(mjreq.NodeInfo)
+	aviMembers := getAllAviMember(master.NodeInfo)
 	if len(aviMembers) == 0 {
 		fmt.Println("No available servers!!")
 		return nil
@@ -546,6 +546,8 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 	}
 
 	fmt.Println(getTimeString() + " Finish Maple!")
+	// send end message
+	sendEnd(master.NodeInfo, mjreq.SDFSPREFIX)
 
 	*reply = true
 	return nil
@@ -557,7 +559,7 @@ Master start Juice phase
 func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 	// reassign reduce task
 	// fill fileTaskMap [serverIp] []intermediateFileName
-	aviMembers := getAllAviMember(mjreq.NodeInfo)
+	aviMembers := getAllAviMember(master.NodeInfo)
 	if len(aviMembers) == 0 {
 		fmt.Println("No available servers!!")
 		return nil
@@ -812,4 +814,23 @@ func determineMasterIndex(node *net_node.Node) int {
 		}
 	}
 	return -1
+}
+
+func sendEnd(node *net_node.Node, sdfs_prefix string) {
+	//members:=getAllAviMember(node)
+	for _, member := range node.Table {
+		remote_addr := net_node.ConvertToAddr(member.Address)
+		remote_tcp_addr := net_node.ConvertUDPToTCP(*remote_addr)
+		conn, err := net.DialTCP("tcp", nil, remote_tcp_addr)
+		if err != nil {
+			fmt.Println("Can't dial server.")
+			return
+		}
+		defer conn.Close()
+
+		sdfsPrefix_str := fmt.Sprintf("%100s", sdfs_prefix) //might have a problem
+		first_line := []byte("ED" + sdfsPrefix_str)
+		conn.Write(first_line)
+
+	}
 }
