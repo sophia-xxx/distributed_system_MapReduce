@@ -6,7 +6,7 @@ import (
 
 // ----------for MapleJuice-----------
 const (
-	CLIPPREFIX      = "src_file_clip"
+	CLIPPREFIX      = "src_file_clip_"
 	MAPLEFILEPREFIX = "maple_intermediate_file_"
 	JUICEFILEPREFIX = "juice_intermediate_file_"
 	//FILEPREFIX  = "sdfs_intermediate_file_prefix_"
