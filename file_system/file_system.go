@@ -496,9 +496,12 @@ func ReceiveFile(connection net.Conn, need_append bool) {
 	sdfsPrefix_buff := make([]byte, 100)
 	connection.Read(sdfsPrefix_buff)
 	sdfsPrefix_str := strings.Trim(string(sdfsPrefix_buff), " ")
-	if sdfsPrefix_str != "" {
-		fmt.Println("With Prefix: " + sdfsPrefix_str)
-	}
+	//if sdfsPrefix_str != "" {
+	//	fmt.Println("With Prefix: " + sdfsPrefix_str)
+	//}
+
+	// debug
+	fmt.Println("With Prefix: " + sdfsPrefix_str)
 
 	// Create the file
 	new_file, err := os.Create(filename)
