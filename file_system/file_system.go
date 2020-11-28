@@ -1051,7 +1051,7 @@ func PutIntermediateFile(node *net_node.Node, connection net.Conn) {
 		if strings.Compare(prefixString, config.MAPLEFILEPREFIX) == 0 {
 			// put file into sdfs directory
 			fmt.Println("Find match prefix" + prefixString + " filename is " + fileName)
-			fmt.Println("Beginning put " + fileName " as " + sdfs_prefix+"_"+tempList[len(tempList)-1])
+			fmt.Println("Beginning put " + fileName + " as " + sdfs_prefix + "_" + tempList[len(tempList)-1])
 			go PutFile(node, fileName, sdfs_prefix+"_"+tempList[len(tempList)-1])
 		}
 	}
