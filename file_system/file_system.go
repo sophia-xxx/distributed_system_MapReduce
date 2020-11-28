@@ -526,10 +526,14 @@ func ReceiveFile(connection net.Conn, need_append bool) {
 	data := buff[:num_bytes_read]
 	new_file.Write(data)
 	if need_append {
-		if len(filename) >= len(config.MAPLEFILEPREFIX) {
-			file_name_prefix := filename[0:len(config.MAPLEFILEPREFIX)]
-			if file_name_prefix == config.MAPLEFILEPREFIX {
-				CreatAppendSdfsKeyFile(filename)
+		if len(filename) > 6 && filename[len(filename):len(filename)-6] == "reduce"{
+			CreatAppendSdfsReduceFile(filename)
+		}else{
+			if len(filename) >= len(config.MAPLEFILEPREFIX) {
+				file_name_prefix := filename[0:len(config.MAPLEFILEPREFIX)]
+				if file_name_prefix == config.MAPLEFILEPREFIX {
+					CreatAppendSdfsKeyFile(filename)
+				}
 			}
 		}
 	}
@@ -932,31 +936,31 @@ func GetLocalSyncWriter(filename string) *SyncWriter {
 
 // After Receiving a sdfs_intermediate_file, do the append
 func CreatAppendSdfsKeyFile(filename string) {
-	var target_sdfs_filename string
+	var append_target_filename string
 	for i := len(filename) - 1; i >= 0; i-- {
 		if filename[i] == '_' { //extra for reduce append
-			if filename[i+1:len(filename)] == "reduce" {
-				for j := 0; j < len(filename); j++ {
-					if filename[j] == '_' {
-						target_sdfs_filename = filename[0:j]
-					}
-				}
-			} else {
-				target_sdfs_filename = filename[0:i]
-				break
-			}
+			// if filename[i+1:len(filename)] == "reduce" {// Big problem
+			// 	for j := 0; j < len(filename); j++ {
+			// 		if filename[j] == '_' {
+			// 			append_target_filename = filename[0:j]
+			// 		}
+			// 	}
+			// } else {
+			append_target_filename = filename[0:i]
+			break
+			//}
 		}
 	}
-	// _, err := os.Stat(target_sdfs_filename)
+	// _, err := os.Stat(append_target_filename)
 	// if os.IsNotExist(err) {
-	// 	f, err := os.Create(target_sdfs_filename)
-	// 	of_map[target_sdfs_filename] = f
+	// 	f, err := os.Create(append_target_filename)
+	// 	of_map[append_target_filename] = f
 	// } else {
-	// 	f, err := os.Open(target_sdfs_filename)
-	// 	of_map[target_sdfs_filename] = f
+	// 	f, err := os.Open(append_target_filename)
+	// 	of_map[append_target_filename] = f
 	// }
-	// f := of_map[target_sdfs_filename]
-	writer := GetLocalSyncWriter(target_sdfs_filename)
+	// f := of_map[append_target_filename]
+	writer := GetLocalSyncWriter(append_target_filename)
 	ifstream, err := os.Open(filename)
 	if err != nil {
 		fmt.Println("Can not open the MapleTask input file!")
@@ -986,6 +990,47 @@ func CreatAppendSdfsKeyFile(filename string) {
 // func AppendReduceFile(filename string, DestFileName string){
 // 	var target_reduce_result string
 // }
+func CreatAppendSdfsReduceFile(filename string) {
+	var DestFileName string
+	for i := 0; i < len(filename) 0; i++ {
+		if filename[i] == '_' { //extra for reduce append
+			DestFileName = filename[0:i]
+		}
+	}
+	// _, err := os.Stat(DestFileName)
+	// if os.IsNotExist(err) {
+	// 	f, err := os.Create(DestFileName)
+	// 	of_map[DestFileName] = f
+	// } else {
+	// 	f, err := os.Open(DestFileName)
+	// 	of_map[DestFileName] = f
+	// }
+	// f := of_map[DestFileName]
+	writer := GetLocalSyncWriter(DestFileName)
+	ifstream, err := os.Open(filename)
+	if err != nil {
+		fmt.Println("Can not open the MapleTask input file!")
+	}
+	input := bufio.NewScanner(ifstream)
+	wg := sync.WaitGroup{}
+	for {
+		if !input.Scan() {
+			break
+		}
+		line := input.Text()
+		wg.Add(1)
+		go func(message string) {
+			fmt.Fprintln(writer, message)
+			wg.Done()
+		}(line)
+
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+	wg.Wait()
+}
 
 // when node receive maple-end command
 // it will put the local file into sdfs directory
@@ -1005,9 +1050,9 @@ func PutIntermediateFile(node *net_node.Node, connection net.Conn) {
 		}
 		tempList := strings.Split(fileName, "_")
 		prefixString := strings.Join(tempList[:len(tempList)-1], "_")
-		if strings.Compare(prefixString, sdfs_prefix) == 0 {
+		if strings.Compare(prefixString, config.MAPLEFILEPREFIX) == 0 {
 			// put file into sdfs directory
-			go PutFile(node, fileName, fileName)
+			go PutFile(node, fileName, sdfs_prefix+tempList[len(tempList)-1])
 		}
 	}
 

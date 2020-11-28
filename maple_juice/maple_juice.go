@@ -64,14 +64,14 @@ func split(fileName string, clipNum int) map[int]string {
 	for fileScanner.Scan() {
 		var fileSplit *os.File
 		// create new files for different file clips
-		fileSplit, _ = os.Create(config.CLIPPREFIX + "_" + strconv.Itoa(count))
+		fileSplit, _ = os.Create(config.CLIPPREFIX + strconv.Itoa(count))
 		defer fileSplit.Close()
 		for i := 0; i < splitLines-1; i++ {
 			line := fileScanner.Text()
 			fileSplit.WriteString(line + "\n")
 			if !fileScanner.Scan() {
 				endScan = true
-				fileClips[count] = config.CLIPPREFIX + "_" + strconv.Itoa(count)
+				fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
 				//fileInfo, _ := fileSplit.Stat()
 				//fmt.Println("File clip: ", fileInfo.Size())
 				break
@@ -84,7 +84,7 @@ func split(fileName string, clipNum int) map[int]string {
 		line := fileScanner.Text()
 		fileSplit.WriteString(line + "\n")
 		// add to fileClip map
-		fileClips[count] = config.CLIPPREFIX + "_" + strconv.Itoa(count)
+		fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
 		// check whether this write successfully
 		//fileInfo, _ := fileSplit.Stat()
 		//fileClips[count] = CLIPPREFIX + strconv.Itoa(count)
@@ -281,8 +281,12 @@ func splitMapleResultFile(resultFileName string, taskID int, of_map map[string]*
 		key := str[0]
 		f, ok := of_map[key]
 		if !ok {
+<<<<<<< HEAD
 			// todo: maybe need to change the name
+			append_file_name := config.MAPLEFILEPREFIX + "_" + key + "_" + strconv.Itoa(taskID)
+=======
 			append_file_name := config.MAPLEFILEPREFIX + key + "_" + strconv.Itoa(taskID)
+>>>>>>> ac527651d691e9fc5fa3de89e92215540fca9f11
 			//f, err := os.OpenFile(append_file_name, os.O_RDONLY|os.O_CREATE|os.O_APPEND, 0666)
 			f, err := os.Create(append_file_name)
 			if err != nil {
@@ -326,7 +330,6 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	}
 	// execute maple_exe
 	// get a "result" file after the maple_exe finished
-	// todo: can we change the name??
 	resultFileName := "maple_result"
 	err := executeMapleExe(args.ExecName, args.LocalFileName, resultFileName)
 	if err != nil {
@@ -343,7 +346,11 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	// send file to target node to merge
 	for key := range keyFileMap {
 		//local_file_path := config.FILEPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
-		local_file_path := config.MAPLEFILEPREFIX + key + "_" + strconv.Itoa(taskID)
+<<<<<<< HEAD
+		local_file_path := config.MAPLEFILEPREFIX + "_" + key + "_" + strconv.Itoa(taskID)
+=======
+		local_file_path := config.MAPLEFILEPREFIX + key + "_" + strconv.Itoa(args.TaskNum)
+>>>>>>> ac527651d691e9fc5fa3de89e92215540fca9f11
 		f, _ := os.Stat(local_file_path)
 		// find the target node to merge and store the sdfs_prefix_key file
 		targetIndex := determineIndex(node, key)
@@ -377,8 +384,15 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 	fileList := args.JuiceFileList
 	// loop fileList
 	for _, keyfile := range fileList {
+		var keystr string
+		for i := len(keyfile) - 1; i >=0; i--{
+			if keyfile[i] == "_" {
+				keystr = keyfile[i+1:len(keyfile)]
+				break
+			}
+		}
 		// todo: maybe need to change name
-		local_key_filename := "Local_" + keyfile
+		local_key_filename := config.JUICEFILEPREFIX + "_" + keystr
 		go file_system.GetFile(node, keyfile, local_key_filename)
 		//time.Sleep(config.GETFILEWAIT)
 
@@ -391,7 +405,7 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 		// get a "result" file after the juice_exe finished
 		// name the result file as "local_" + keyFileName + "_reduce"
 		// todo: maybe need to change name
-		resultFileName := args.DestFileName + "_" + local_key_filename + "_reduce"
+		resultFileName := args.DestFileName + "_" local_key_filename + "_reduce"
 		err := executeJuiceExe(args.ExecName, local_key_filename, resultFileName)
 		if err != nil {
 			fmt.Println(err)
@@ -409,10 +423,10 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 			go file_system.Send_file_tcp(node, int32(targetIndex), resultFileName, resultFileName, f.Size(), args.DestFileName, true)
 		}
 	}
-	// clean all intermediate files
+	// clean all intermediate files in local directory
 	time.Sleep(config.GETFILEWAIT)
 	if strings.Compare(args.Delete, "1") == 0 {
-		cleanIntermediateFiles(args.SDFSPREFIX)
+		cleanIntermediateFiles()
 	}
 	// todo: add intermediate file into sdfsFileTable (Done at the end of Maple)
 	*reply = true
@@ -613,7 +627,12 @@ func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 		count++
 	}
 	fmt.Println(getTimeString() + " Finish Juice!")
-
+	// delete sdfs file
+	if mjreq.Delete == "1" {
+		for _, key := range master.keyList {
+			go file_system.DeleteFile(mjreq.NodeInfo, mjreq.SDFSPREFIX+key)
+		}
+	}
 	*reply = true
 	return nil
 }
@@ -645,7 +664,7 @@ func (master *Master) Shuffle(keyList []string, servers []string, serverTaskMap 
 	if strings.Compare(partition, "hash") == 0 {
 		for _, key := range keyList {
 			serverIndex := int(Hash(key)) % len(servers)
-			serverTaskMap[servers[serverIndex]] = append(serverTaskMap[servers[serverIndex]], sdfs_prefix+key)
+			serverTaskMap[servers[serverIndex]] = append(serverTaskMap[servers[serverIndex]], sdfs_prefix+"_"+key)
 		}
 	}
 	if strings.Compare(partition, "range") == 0 {
@@ -653,7 +672,7 @@ func (master *Master) Shuffle(keyList []string, servers []string, serverTaskMap 
 		serverIndex := 0
 		for _, key := range keyList {
 			if len(serverTaskMap[servers[serverIndex]]) <= keyNum {
-				serverTaskMap[servers[serverIndex]] = append(serverTaskMap[servers[serverIndex]], sdfs_prefix+key)
+				serverTaskMap[servers[serverIndex]] = append(serverTaskMap[servers[serverIndex]], sdfs_prefix+"_"+key)
 			} else {
 				serverIndex++
 			}
@@ -664,7 +683,7 @@ func (master *Master) Shuffle(keyList []string, servers []string, serverTaskMap 
 /*
 Server clean all intermediate file in sdfs, same as "delete" command
 */
-func cleanIntermediateFiles(sdfs_prefix string) {
+func cleanIntermediateFiles() {
 	files, _ := ioutil.ReadDir("./")
 	for _, f := range files {
 		fileName := f.Name()
@@ -672,17 +691,10 @@ func cleanIntermediateFiles(sdfs_prefix string) {
 			continue
 		}
 		tempList := strings.Split(fileName, "_")
-		// delete file split clips  CLIPPREFIX  = "sdfs_src_file_clip_"
-		//if strings.Compare(tempList[0], "sdfs") == 0 {
-		//	err := os.Remove(fileName)
-		//	if err != nil {
-		//		fmt.Println(err)
-		//		return
-		//	}
-		//}
-		// delete sdfs_intermediate_prefix file
+
+		// delete config.mapleprefix file and config.clip file and sdfs_prefix file
 		prefixString := strings.Join(tempList[:len(tempList)-1], "_")
-		if strings.Compare(prefixString, sdfs_prefix) == 0 {
+		if strings.Compare(prefixString+"_", config.CLIPPREFIX) == 0 || strings.Compare(prefixString+"_", config.MAPLEFILEPREFIX) == 0 {
 			err := os.Remove(fileName)
 			if err != nil {
 				fmt.Println(err)
