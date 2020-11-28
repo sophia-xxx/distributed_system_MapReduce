@@ -167,6 +167,7 @@ func run_tcp(n *net_node.Node) {
 
 		// maple end command
 		case "ED":
+			fmt.Println("Receive Maple end message, begin put the maple intermediate file to sdfs!")
 			file_system.PutIntermediateFile(n, connection)
 		}
 
