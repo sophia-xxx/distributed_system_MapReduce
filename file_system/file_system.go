@@ -526,12 +526,13 @@ func ReceiveFile(connection net.Conn, need_append bool) {
 	data := buff[:num_bytes_read]
 	new_file.Write(data)
 	if need_append {
-		if len(filename) > 6 && filename[len(filename):len(filename)-6] == "reduce" {
+		nameTemp := strings.Split(filename, "_")
+		if strings.Compare(nameTemp[len(nameTemp)-1], "reduce") == 0 {
 			CreatAppendSdfsReduceFile(filename)
 		} else {
 			if len(filename) >= len(config.MAPLEFILEPREFIX) {
 				file_name_prefix := filename[0:len(config.MAPLEFILEPREFIX)]
-				if file_name_prefix == config.MAPLEFILEPREFIX {
+				if strings.Compare(file_name_prefix, config.MAPLEFILEPREFIX) == 0 {
 					CreatAppendSdfsKeyFile(filename)
 				}
 			}
@@ -937,20 +938,15 @@ func GetLocalSyncWriter(filename string) *SyncWriter {
 // After Receiving a sdfs_intermediate_file, do the append
 func CreatAppendSdfsKeyFile(filename string) {
 	var append_target_filename string
-	for i := len(filename) - 1; i >= 0; i-- {
-		if filename[i] == '_' { //extra for reduce append
-			// if filename[i+1:len(filename)] == "reduce" {// Big problem
-			// 	for j := 0; j < len(filename); j++ {
-			// 		if filename[j] == '_' {
-			// 			append_target_filename = filename[0:j]
-			// 		}
-			// 	}
-			// } else {
-			append_target_filename = filename[0:i]
-			break
-			//}
-		}
-	}
+	nameTemp := strings.Split(filename, "_")
+	append_target_filename = strings.Join(nameTemp[:len(nameTemp)-1], "_")
+	//for i := len(filename) - 1; i >= 0; i-- {
+	//	if filename[i] == '_' { //extra for reduce append
+	//		append_target_filename = filename[0:i]
+	//		break
+	//		//}
+	//	}
+	//}
 	// _, err := os.Stat(append_target_filename)
 	// if os.IsNotExist(err) {
 	// 	f, err := os.Create(append_target_filename)

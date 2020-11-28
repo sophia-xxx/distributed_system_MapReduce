@@ -64,14 +64,14 @@ func split(fileName string, clipNum int) map[int]string {
 	for fileScanner.Scan() {
 		var fileSplit *os.File
 		// create new files for different file clips
-		fileSplit, _ = os.Create(config.CLIPPREFIX + strconv.Itoa(count))
+		fileSplit, _ = os.Create(config.CLIPPREFIX + "_" + strconv.Itoa(count))
 		defer fileSplit.Close()
 		for i := 0; i < splitLines-1; i++ {
 			line := fileScanner.Text()
 			fileSplit.WriteString(line + "\n")
 			if !fileScanner.Scan() {
 				endScan = true
-				fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
+				fileClips[count] = config.CLIPPREFIX + "_" + strconv.Itoa(count)
 				//fileInfo, _ := fileSplit.Stat()
 				//fmt.Println("File clip: ", fileInfo.Size())
 				break
@@ -84,7 +84,7 @@ func split(fileName string, clipNum int) map[int]string {
 		line := fileScanner.Text()
 		fileSplit.WriteString(line + "\n")
 		// add to fileClip map
-		fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
+		fileClips[count] = config.CLIPPREFIX + "_" + strconv.Itoa(count)
 		// check whether this write successfully
 		//fileInfo, _ := fileSplit.Stat()
 		//fileClips[count] = CLIPPREFIX + strconv.Itoa(count)
@@ -690,9 +690,9 @@ func cleanIntermediateFiles() {
 
 		// delete config.mapleprefix file and config.clip file and sdfs_prefix file
 		prefixString := strings.Join(tempList[:len(tempList)-1], "_")
-		if strings.Compare(prefixString+"_", config.CLIPPREFIX) == 0 ||
-			strings.Compare(prefixString+"_", config.MAPLEFILEPREFIX) == 0 ||
-			strings.Compare(prefixString+"_", config.JUICEFILEPREFIX) == 0 ||
+		if strings.Compare(prefixString, config.CLIPPREFIX) == 0 ||
+			strings.Compare(prefixString, config.MAPLEFILEPREFIX) == 0 ||
+			strings.Compare(prefixString, config.JUICEFILEPREFIX) == 0 ||
 			strings.Compare(tempList[len(tempList)-1], "reduce") == 0 {
 			err := os.Remove(fileName)
 			if err != nil {
