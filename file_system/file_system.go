@@ -526,9 +526,9 @@ func ReceiveFile(connection net.Conn, need_append bool) {
 	data := buff[:num_bytes_read]
 	new_file.Write(data)
 	if need_append {
-		if len(filename) > 6 && filename[len(filename):len(filename)-6] == "reduce"{
+		if len(filename) > 6 && filename[len(filename):len(filename)-6] == "reduce" {
 			CreatAppendSdfsReduceFile(filename)
-		}else{
+		} else {
 			if len(filename) >= len(config.MAPLEFILEPREFIX) {
 				file_name_prefix := filename[0:len(config.MAPLEFILEPREFIX)]
 				if file_name_prefix == config.MAPLEFILEPREFIX {
@@ -992,11 +992,13 @@ func CreatAppendSdfsKeyFile(filename string) {
 // }
 func CreatAppendSdfsReduceFile(filename string) {
 	var DestFileName string
-	for i := 0; i < len(filename) 0; i++ {
-		if filename[i] == '_' { //extra for reduce append
-			DestFileName = filename[0:i]
-		}
-	}
+	nameTemp := strings.Split(filename, "_")
+	DestFileName = nameTemp[0]
+	//for i := 0; i < len(filename) 0; i++ {
+	//	if filename[i] == '_' { //extra for reduce append
+	//		DestFileName = filename[0:i]
+	//	}
+	//}
 	// _, err := os.Stat(DestFileName)
 	// if os.IsNotExist(err) {
 	// 	f, err := os.Create(DestFileName)
