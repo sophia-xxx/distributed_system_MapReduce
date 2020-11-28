@@ -763,7 +763,7 @@ func findIndexByIp(n *net_node.Node, ip string) int {
 func getAllAviMember(node *net_node.Node) []*pings.TableEntryProto {
 	var aviMember []*pings.TableEntryProto
 	for _, member := range node.Table {
-		if member.Status == net_node.ACTIVE|net_node.JOINED {
+		if member.Status == net_node.ACTIVE {
 			aviMember = append(aviMember, member)
 		}
 	}
