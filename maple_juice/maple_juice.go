@@ -625,7 +625,7 @@ func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 	// delete sdfs file
 	if mjreq.Delete == "1" {
 		for _, key := range master.keyList {
-			go file_system.DeleteFile(mjreq.NodeInfo, mjreq.SDFSPREFIX+key)
+			go file_system.DeleteFile(mjreq.NodeInfo, mjreq.SDFSPREFIX+"_"+key)
 		}
 	}
 
