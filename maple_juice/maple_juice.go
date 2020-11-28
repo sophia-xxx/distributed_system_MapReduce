@@ -600,7 +600,8 @@ func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 		}
 		fmt.Println(">>>Dial server "+server+"  TaskNum: ", task.TaskNum)
 
-		var juiceResults []string
+		//var juiceResults []string
+		var juiceResults bool
 		// todo: better to use asynchronous call here- client.Go()
 		// todo: here we may need to deal with unfinished task then reassign it
 		err = client.Call("Server.JuiceTask", task, &juiceResults)
