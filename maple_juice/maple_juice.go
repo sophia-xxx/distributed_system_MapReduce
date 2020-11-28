@@ -72,8 +72,8 @@ func split(fileName string, clipNum int) map[int]string {
 			if !fileScanner.Scan() {
 				endScan = true
 				fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
-				fileInfo, _ := fileSplit.Stat()
-				fmt.Println("File clip: ", fileInfo.Size())
+				//fileInfo, _ := fileSplit.Stat()
+				//fmt.Println("File clip: ", fileInfo.Size())
 				break
 			}
 		}
@@ -86,9 +86,9 @@ func split(fileName string, clipNum int) map[int]string {
 		// add to fileClip map
 		fileClips[count] = config.CLIPPREFIX + strconv.Itoa(count)
 		// check whether this write successfully
-		fileInfo, _ := fileSplit.Stat()
+		//fileInfo, _ := fileSplit.Stat()
 		//fileClips[count] = CLIPPREFIX + strconv.Itoa(count)
-		fmt.Println("File clip: ", fileInfo.Size())
+		//fmt.Println("File clip: ", fileInfo.Size())
 		count++
 	}
 	//return fileClips
@@ -150,11 +150,19 @@ func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int,
 		SenderIp:   n.Address.IP,
 		NodeInfo:   n,
 	}
-	if err := client.Call("Master.StartMapleJuice", args, &reply); err != nil {
+	if err := client.Call("Master.StartMaple", args, &reply); err != nil {
 		fmt.Println("Can't start MapleJuice - Maple!")
 		return
 	}
 	fmt.Println(getTimeString() + " Start Maple!")
+	// got message from master, maple end, delete file clips
+	for {
+		time.Sleep(config.GETFILEWAIT)
+		if reply {
+			cleanIntermediateFiles(sdfs_intermediate_filename_prefix)
+			break
+		}
+	}
 
 }
 
@@ -166,7 +174,6 @@ func CallJuice(n *net_node.Node, workType string, juiceExe string, juiceNum int,
 		fmt.Println("Can't set connection with remote process!(During CallJuice)")
 		return
 	}
-
 	// call master RPC
 	args := &MJReq{
 		WorkType:     workType,
@@ -177,6 +184,7 @@ func CallJuice(n *net_node.Node, workType string, juiceExe string, juiceNum int,
 		SenderIp:     n.Address.IP,
 		NodeInfo:     n,
 		Partition:    partition,
+		Delete:       deleteOrNot,
 	}
 	if err := client.Call("Master.StartJuice", args, &reply); err != nil {
 		fmt.Println("Can't start MapleJuice - Juice!")
@@ -205,6 +213,7 @@ type Task struct {
 	ServerIp       string // server in charge of this task
 	SourceIp       string // server has that file
 	LastTime       *timestamppb.Timestamp
+	Delete         string
 	//NodeInfo   *net_node.Node
 }
 
@@ -388,9 +397,7 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 			fmt.Println(err)
 			return nil
 		}
-
 		f, _ := os.Stat(resultFileName)
-
 		targetIndex := determineMasterIndex(node) //By default, send all reduce result to master
 		if targetIndex == -1 {
 			fmt.Println("Can't get master ip!")
@@ -401,6 +408,11 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 		} else {
 			go file_system.Send_file_tcp(node, int32(targetIndex), resultFileName, resultFileName, f.Size(), args.DestFileName, true)
 		}
+	}
+	// clean all intermediate files
+	time.Sleep(config.GETFILEWAIT)
+	if strings.Compare(args.Delete, "1") == 0 {
+		cleanIntermediateFiles(args.SDFSPREFIX)
 	}
 	// todo: add intermediate file into sdfsFileTable (Done at the end of Maple)
 	*reply = true
@@ -447,6 +459,7 @@ type MJReq struct {
 	SenderIp     net.IP
 	NodeInfo     *net_node.Node
 	Partition    string
+	Delete       string
 }
 
 // master keep record of all maple/reduce tasks
@@ -467,7 +480,7 @@ func NewMaster(n *net_node.Node) *Master {
 /*
 master rpc method to start MapleJuice
 */
-func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
+func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 	// get all potential servers
 	//members := mjreq.NodeInfo.Table
 	aviMembers := getAllAviMember(mjreq.NodeInfo)
@@ -495,19 +508,6 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 		return nil
 	}
 
-	// for i, server := range servers {
-	// 	var index int
-	// 	var collision = 1
-	// 	for {
-	// 		// hash server Ip and get the index of fileClips
-	// 		index = int(Hash(server+strconv.Itoa(collision))) % len(servers)
-	// 		// when the file is already allocated
-	// 		_, ok := master.FileTaskMap[fileClips[index]]
-	// 		if !ok {
-	// 			break
-	// 		}
-	// 		collision++
-
 	// schedule the maple tasks
 	for index, _ := range fileClips {
 		server := servers[index]
@@ -524,7 +524,6 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 			ExecName:       mjreq.WorkExe,
 			SDFSPREFIX:     mjreq.SDFSPREFIX,
 		}
-
 		master.FileTaskMap[server] = append(master.FileTaskMap[server], fileClips[index])
 
 		// call server's RPC methods
@@ -555,7 +554,6 @@ func (master *Master) StartMapleJuice(mjreq MJReq, reply *bool) error {
 /*
 Master start Juice phase
 */
-
 func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 	// reassign reduce task
 	// fill fileTaskMap [serverIp] []intermediateFileName
@@ -567,7 +565,6 @@ func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 	var servers []string
 	for _, member := range aviMembers {
 		IPString := ChangeIPtoString(member.Address.Ip)
-		//fmt.Println(IPString)
 		if strings.Compare(IPString, config.MASTERIP) != 0 {
 			servers = append(servers, IPString)
 		}
@@ -590,6 +587,7 @@ func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 			SDFSPREFIX:    mjreq.SDFSPREFIX,
 			DestFileName:  mjreq.DestFileName,
 			JuiceFileList: filelist,
+			Delete:        mjreq.Delete,
 		}
 
 		// call server's RPC methods
@@ -611,7 +609,6 @@ func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 		}
 		count++
 	}
-
 	fmt.Println(getTimeString() + " Finish Juice!")
 
 	*reply = true
@@ -768,7 +765,7 @@ func getAllAviMember(node *net_node.Node) []*pings.TableEntryProto {
 			aviMember = append(aviMember, member)
 		}
 	}
-	fmt.Println(len(aviMember), " available members. ")
+	//fmt.Println(len(aviMember), " available members. ")
 	return aviMember
 }
 

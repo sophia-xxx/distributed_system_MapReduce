@@ -315,7 +315,7 @@ func excute_maple_command(node *net_node.Node, args []string) {
 }
 
 func excute_juice_command(node *net_node.Node, args []string) {
-	//juice <juice_exe> <num_juices> <sdfs_intermediate_filename_prefix> <sdfs_dest_filename> delete_input={0,1} partition="hash"/"range"
+	//juice <juice_exe> <num_juices> <sdfs_intermediate_filename_prefix> <sdfs_dest_filename> delete_input={0,1(delete)} partition="hash"/"range"
 	juiceNum, _ := strconv.Atoi(args[2])
 	maple_juice.CallJuice(node, args[0], args[1], juiceNum, args[3], args[4], args[5], args[6])
 }
