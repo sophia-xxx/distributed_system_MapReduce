@@ -1052,7 +1052,8 @@ func PutIntermediateFile(node *net_node.Node, connection net.Conn) {
 			// put file into sdfs directory
 			fmt.Println("Find match prefix" + prefixString + " filename is " + fileName)
 			fmt.Println("Beginning put " + fileName + " as " + sdfs_prefix + "_" + tempList[len(tempList)-1])
-			go PutFile(node, fileName, sdfs_prefix+"_"+tempList[len(tempList)-1])
+			PutFile(node, fileName, sdfs_prefix+"_"+tempList[len(tempList)-1])
+			time.Sleep(config.GETFILEWAIT)
 		}
 	}
 
