@@ -379,13 +379,15 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 	// loop fileList
 	for _, keyfile := range fileList {
 		var keystr string
-		for i := len(keyfile) - 1; i >=0; i--{
-			if keyfile[i] == "_" {
-				keystr = keyfile[i+1:len(keyfile)]
-				break
-			}
-		}
-		// todo: maybe need to change name
+		//for i := len(keyfile) - 1; i >=0; i--{
+		//	if strings.Compare(keyfile, "_")==0 {
+		//		keystr = keyfile[i+1:len(keyfile)]
+		//		break
+		//	}
+		//}
+		nameTemp := strings.Split(keyfile, "_")
+		keystr = nameTemp[len(nameTemp)-1]
+
 		local_key_filename := config.JUICEFILEPREFIX + "_" + keystr
 		go file_system.GetFile(node, keyfile, local_key_filename)
 		//time.Sleep(config.GETFILEWAIT)
@@ -399,7 +401,7 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 		// get a "result" file after the juice_exe finished
 		// name the result file as "local_" + keyFileName + "_reduce"
 		// todo: maybe need to change name
-		resultFileName := args.DestFileName + "_" local_key_filename + "_reduce"
+		resultFileName := args.DestFileName + "_" + local_key_filename + "_reduce"
 		err := executeJuiceExe(args.ExecName, local_key_filename, resultFileName)
 		if err != nil {
 			fmt.Println(err)
@@ -422,7 +424,6 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 	if strings.Compare(args.Delete, "1") == 0 {
 		cleanIntermediateFiles()
 	}
-	// todo: add intermediate file into sdfsFileTable (Done at the end of Maple)
 	*reply = true
 	return nil
 }
@@ -538,7 +539,7 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 		client, err := rpc.Dial("tcp", server+":"+config.RPCPORT)
 		if err != nil {
 			fmt.Println("Can't dial server RPC")
-			return nil
+			continue
 		}
 		fmt.Println(">>>Dial server "+server+"  TaskNum: ", task.TaskNum)
 
@@ -548,7 +549,7 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 		err = client.Call("Server.MapleTask", task, &mapleResults)
 		if err != nil {
 			fmt.Println(err)
-			return nil
+			continue
 		}
 		master.keyList = append(master.keyList, mapleResults...)
 	}
@@ -627,6 +628,7 @@ func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 			go file_system.DeleteFile(mjreq.NodeInfo, mjreq.SDFSPREFIX+key)
 		}
 	}
+
 	*reply = true
 	return nil
 }
@@ -688,7 +690,10 @@ func cleanIntermediateFiles() {
 
 		// delete config.mapleprefix file and config.clip file and sdfs_prefix file
 		prefixString := strings.Join(tempList[:len(tempList)-1], "_")
-		if strings.Compare(prefixString+"_", config.CLIPPREFIX) == 0 || strings.Compare(prefixString+"_", config.MAPLEFILEPREFIX) == 0 {
+		if strings.Compare(prefixString+"_", config.CLIPPREFIX) == 0 ||
+			strings.Compare(prefixString+"_", config.MAPLEFILEPREFIX) == 0 ||
+			strings.Compare(prefixString+"_", config.JUICEFILEPREFIX) == 0 ||
+			strings.Compare(tempList[len(tempList)-1], "reduce") == 0 {
 			err := os.Remove(fileName)
 			if err != nil {
 				fmt.Println(err)
