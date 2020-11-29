@@ -286,7 +286,7 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 
 	// Notify the servers that we are writing a file
 	// so that other writes/reads will not be able to proceed
-	notify_other_servers_of_file_write_start(n, filename)
+	//notify_other_servers_of_file_write_start(n, filename)
 
 	// Wait for the other servers to respond
 	// for int(n.Files[filename].NumAckWriting) < net_node.NumActiveServ(n)-1 {
