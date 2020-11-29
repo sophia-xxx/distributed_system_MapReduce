@@ -1047,20 +1047,26 @@ func PutIntermediateFile(node *net_node.Node, connection net.Conn) {
 		fmt.Println("Can't get the sdfs prefix")
 	}
 	files, _ := ioutil.ReadDir("./")
+	// debug
 	for _, f := range files {
-		fileName := f.Name()
-		if len(fileName) == 0 {
-			continue
-		}
-		tempList := strings.Split(fileName, "_")
-		prefixString := strings.Join(tempList[:len(tempList)-1], "_")
-		if strings.Compare(prefixString, config.MAPLEFILEPREFIX) == 0 {
-			// put file into sdfs directory
-			fmt.Println("Find match prefix" + prefixString + " filename is " + fileName)
-			fmt.Println("Beginning put " + fileName + " as " + sdfs_prefix + "_" + tempList[len(tempList)-1])
-			PutFile(node, fileName, sdfs_prefix+"_"+tempList[len(tempList)-1])
-			time.Sleep(config.GETFILEWAIT)
-		}
+		filename := f.Name()
+		fmt.Println(filename)
 	}
+
+	//for _, f := range files {
+	//	fileName := f.Name()
+	//	if len(fileName) == 0 {
+	//		continue
+	//	}
+	//	tempList := strings.Split(fileName, "_")
+	//	prefixString := strings.Join(tempList[:len(tempList)-1], "_")
+	//	if strings.Compare(prefixString, config.MAPLEFILEPREFIX) == 0 {
+	//		// put file into sdfs directory
+	//		fmt.Println("Find match prefix " + prefixString + " filename is " + fileName)
+	//		fmt.Println("Beginning put " + fileName + " as " + sdfs_prefix + "_" + tempList[len(tempList)-1])
+	//		PutFile(node, fileName, sdfs_prefix+"_"+tempList[len(tempList)-1])
+	//		time.Sleep(config.GETFILEWAIT)
+	//	}
+	//}
 
 }

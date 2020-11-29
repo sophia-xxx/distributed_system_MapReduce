@@ -317,7 +317,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		fmt.Println("Can't find source server!")
 		return nil
 	}
-	go getFileClip(node, args.RemoteFileName, args.LocalFileName, index)
+	getFileClip(node, args.RemoteFileName, args.LocalFileName, index)
 	time.Sleep(config.GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(args.LocalFileName) {
@@ -356,7 +356,7 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 		if targetIndex == int(node.Index) {
 			file_system.CreatAppendSdfsKeyFile(local_file_path)
 		} else {
-			go file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size(), args.SDFSPREFIX, true)
+			file_system.Send_file_tcp(node, int32(targetIndex), local_file_path, local_file_path, f.Size(), args.SDFSPREFIX, true)
 		}
 
 	}
@@ -389,7 +389,7 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 		keystr = nameTemp[len(nameTemp)-1]
 
 		local_key_filename := config.JUICEFILEPREFIX + "_" + keystr
-		go file_system.GetFile(node, keyfile, local_key_filename)
+		file_system.GetFile(node, keyfile, local_key_filename)
 		//time.Sleep(config.GETFILEWAIT)
 
 		// check if we get the file
@@ -557,6 +557,7 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 	fmt.Println(getTimeString() + " Finish Maple!")
 	// send end message to all members
 	// then they will put merged file to sdfs directory
+	time.Sleep(config.GETFILEWAIT)
 	sendEnd(master.NodeInfo, mjreq.SDFSPREFIX)
 
 	*reply = true
@@ -625,7 +626,7 @@ func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 	// delete sdfs file
 	if mjreq.Delete == "1" {
 		for _, key := range master.keyList {
-			go file_system.DeleteFile(mjreq.NodeInfo, mjreq.SDFSPREFIX+"_"+key)
+			file_system.DeleteFile(mjreq.NodeInfo, mjreq.SDFSPREFIX+"_"+key)
 		}
 	}
 
