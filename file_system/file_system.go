@@ -368,7 +368,7 @@ func ReceiveFileWriteCompleteMsg(n *net_node.Node, connection net.Conn) {
 
 	// Update the file's metadata
 	n.Files[filename] = meta_data
-	var writ bool
+
 	if n.Files[filename].Writing == true {
 		fmt.Println("Set Writing to true | ReceiveFileWriteCompleteMsg")
 	} else {
