@@ -235,12 +235,13 @@ func RespondToWriteStartMsg(n *net_node.Node, connection net.Conn) {
 		//for n.Files[filename].Writing || n.Files[filename].NumReading > 0 {
 		for n.Files[filename].Writing {
 			fmt.Println(filename + " is writing")
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 		}
 		//n.Files[filename].Writing = true
 	} else {
 		//n.Files[filename] = &pings.FileMetaDataProto{Writing: true, FileSize: 0}
 		n.Files[filename] = &pings.FileMetaDataProto{Writing: false, FileSize: 0}
+		fmt.Println("Set Writing to false | RespondToWriteStartMsg")
 	}
 
 	// Now that all reads are complete, acknowledge that we have finished
@@ -280,9 +281,11 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 			time.Sleep(10 * time.Millisecond)
 		}
 		n.Files[filename].Writing = true
+		fmt.Println("Set Writing to true | acquire_distributed_write_lock fileinsystem")
 	} else {
 		fmt.Println(filename + " not in system, add to local list")
 		n.Files[filename] = &pings.FileMetaDataProto{Writing: true, FileSize: 0}
+		fmt.Println("Set Writing to true | acquire_distributed_write_lock filenotinsystem")
 	}
 
 	// Notify the servers that we are writing a file
@@ -315,6 +318,7 @@ func notify_servers_of_file_put_complete(n *net_node.Node, servers []int32, file
 		NumReading:    0,
 	}
 	n.Files[filename] = file_meta_data
+	fmt.Println("Set Writing to false | notify_servers_of_file_put_complete")
 
 	// Update the current node's file size numbers
 	for i := 0; i < len(n.Files[filename].Servers); i++ {
@@ -364,6 +368,12 @@ func ReceiveFileWriteCompleteMsg(n *net_node.Node, connection net.Conn) {
 
 	// Update the file's metadata
 	n.Files[filename] = meta_data
+	var writ bool
+	if n.Files[filename].Writing == true {
+		fmt.Println("Set Writing to true | ReceiveFileWriteCompleteMsg")
+	} else {
+		fmt.Println("Set Writing to false | ReceiveFileWriteCompleteMsg")
+	}
 
 	// Update the file size for all appropriate servers
 	for i := 0; i < len(n.Files[filename].Servers); i++ {
