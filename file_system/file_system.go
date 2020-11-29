@@ -76,6 +76,7 @@ func MergeFileList(n *net_node.Node, msg *pings.TableMessasgeProto) {
 			}
 		} else {
 			n.Files[filename] = other_metadata
+			n.Files[filename].Writing = false
 			fmt.Println(filename + " Set Writing to " + strconv.FormatBool(n.Files[filename].Writing) + " | MergeFileList")
 		}
 	}
