@@ -390,7 +390,7 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 
 		local_key_filename := config.JUICEFILEPREFIX + "_" + keystr
 		file_system.GetFile(node, keyfile, local_key_filename)
-		//time.Sleep(config.GETFILEWAIT)
+		time.Sleep(config.GETFILEWAIT)
 
 		// check if we get the file
 		if !WhetherFileExist(args.LocalFileName) {
