@@ -232,6 +232,7 @@ func RespondToWriteStartMsg(n *net_node.Node, connection net.Conn) {
 	// Wait for any preexisting reads and writes to complete
 	if file_in_filesystem(n, filename) {
 		for n.Files[filename].Writing || n.Files[filename].NumReading > 0 {
+			fmt.Println(n.Files[filename] + " is writing")
 			time.Sleep(10 * time.Millisecond)
 		}
 		n.Files[filename].Writing = true
@@ -285,6 +286,8 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 
 	// Wait for the other servers to respond
 	for int(n.Files[filename].NumAckWriting) < net_node.NumActiveServ(n)-1 {
+		fmt.Sprintf("Got %d ack", int(n.Files[filename].NumAckWriting))
+		fmt.Sprintf("numberactive serv is %d \n", net_node.NumActiveServ(n))
 		fmt.Println("waiting for all ackwriting")
 		time.Sleep(10 * time.Millisecond)
 	}
