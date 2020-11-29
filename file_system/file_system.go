@@ -827,7 +827,9 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 	// Do not begin writing until we have waited for all
 	// other writes and reads on the file to finish  and notified
 	// other servers that we are writing
-	acquire_distributed_write_lock(n, filename)
+
+	//acquire_distributed_write_lock(n, filename)
+
 	// debug
 	fmt.Println("acquire lock")
 
