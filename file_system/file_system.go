@@ -22,6 +22,7 @@ import (
 )
 
 var of_map map[string]*os.File
+var mutex sync.Mutex
 
 /*
  * Implementation of the ls command
@@ -258,7 +259,9 @@ func ReceiveWriteStrMsgResponse(n *net_node.Node, connection net.Conn) {
 	file_name_buff := make([]byte, 100)
 	connection.Read(file_name_buff)
 	filename := strings.Trim(string(file_name_buff), " ")
+	mutex.Lock()
 	n.Files[filename].NumAckWriting += 1
+	mutex.Unlock()
 }
 
 /*
@@ -286,7 +289,7 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 
 	// Wait for the other servers to respond
 	for int(n.Files[filename].NumAckWriting) < net_node.NumActiveServ(n)-1 {
-		fmt.Println("Got " + strconv.Itoa(int(n.Files[filename].NumAckWriting)) + " acks")
+		fmt.Println(filename + " got " + strconv.Itoa(int(n.Files[filename].NumAckWriting)) + " acks")
 		fmt.Println("numberactive serv is " + strconv.Itoa(net_node.NumActiveServ(n)))
 		fmt.Println("waiting for all ackwriting")
 		time.Sleep(100 * time.Millisecond)
