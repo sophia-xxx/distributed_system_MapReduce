@@ -76,6 +76,7 @@ func MergeFileList(n *net_node.Node, msg *pings.TableMessasgeProto) {
 			}
 		} else {
 			n.Files[filename] = other_metadata
+			fmt.Println(filename + " Set Writing to " + strconv.FormatBool(n.Files[filename].Writing) + " | MergeFileList")
 		}
 	}
 }
@@ -232,10 +233,11 @@ func RespondToWriteStartMsg(n *net_node.Node, connection net.Conn) {
 
 	// Wait for any preexisting reads and writes to complete
 	if file_in_filesystem(n, filename) {
+		fmt.Println(filename + " is in system with writing = " + strconv.FormatBool(n.Files[filename].Writing))
 		//for n.Files[filename].Writing || n.Files[filename].NumReading > 0 {
 		for n.Files[filename].Writing {
 			fmt.Println(filename + " is writing")
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(300 * time.Millisecond)
 		}
 		//n.Files[filename].Writing = true
 	} else {
