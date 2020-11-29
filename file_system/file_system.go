@@ -103,6 +103,8 @@ func Send_file_tcp(n *net_node.Node, server_index int32, local_filepath string, 
 	if need_append {
 		first_line = []byte("PA" + file_size_str + filename_str + sdfsPrefix_str)
 	} else {
+		//debug
+		fmt.Println(filename)
 		first_line = []byte("P_" + file_size_str + filename_str + sdfsPrefix_str)
 	}
 	conn.Write(first_line)
@@ -183,6 +185,8 @@ func send_file_to_servers(n *net_node.Node, file_server_indices []int32, local_f
 		} else if uint32(server_index) == n.Index {
 			write_file_locally(local_filepath, filename)
 		} else {
+			// debug
+			fmt.Println(server_index, " filename: "+local_filepath+"  "+filename)
 			Send_file_tcp(n, server_index, local_filepath, filename, file_size, "", false)
 		}
 	}
@@ -823,6 +827,8 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 	}
 
 	send_file_to_servers(n, servers, local_filepath, filename, file_size)
+	// debug
+	fmt.Println("Send file to  ", servers)
 
 	// Send a message to the remaining servers that the file has been put
 	notify_servers_of_file_put_complete(n, servers, filename, file_size)
