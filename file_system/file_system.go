@@ -232,7 +232,8 @@ func RespondToWriteStartMsg(n *net_node.Node, connection net.Conn) {
 
 	// Wait for any preexisting reads and writes to complete
 	if file_in_filesystem(n, filename) {
-		for n.Files[filename].Writing || n.Files[filename].NumReading > 0 {
+		//for n.Files[filename].Writing || n.Files[filename].NumReading > 0 {
+		for n.Files[filename].Writing > 0 {
 			fmt.Println(filename + " is writing")
 			time.Sleep(10 * time.Millisecond)
 		}
