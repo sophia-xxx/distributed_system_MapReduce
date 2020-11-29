@@ -1,7 +1,7 @@
 put ./mj_exe/wc_simple_input test
-get test local_wc_input
+get test wcinput
 maple ./mj_exe/wc_maple 3 sdfs_intermediate_file_prefix_ local_wc_input
 
 get test local_wc_input
-maple ./mj_exe/wc_maple 3 wcinter local_wc_input
+maple ./mj_exe/wc_maple 3 wcinter wcinput
 juice ./mj_exe/juice_wordcount 3 wcinter final 1 hash

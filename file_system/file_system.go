@@ -286,10 +286,10 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 
 	// Wait for the other servers to respond
 	for int(n.Files[filename].NumAckWriting) < net_node.NumActiveServ(n)-1 {
-		fmt.Sprintf("Got %d ack", int(n.Files[filename].NumAckWriting))
-		fmt.Sprintf("numberactive serv is %d \n", net_node.NumActiveServ(n))
+		fmt.Println("Got " + strconv.Itoa(int(n.Files[filename].NumAckWriting)) + " acks")
+		fmt.Println("numberactive serv is " + strconv.Itoa(net_node.NumActiveServ(n)))
 		fmt.Println("waiting for all ackwriting")
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	n.Files[filename].NumAckWriting = 0
