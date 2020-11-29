@@ -106,7 +106,7 @@ func splitFile(n *net_node.Node, mapleNum int, sdfsFileName string, localFileNam
 	//time.Sleep(config.GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(localFileName) {
-		fmt.Println("Can't get the file:  " + sdfsFileName + ". Check the Internet!")
+		fmt.Println("Can't get the file:  " + sdfsFileName + " . Check the Internet!")
 		return nil
 	}
 	// debug
