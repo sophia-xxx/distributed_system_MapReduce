@@ -844,6 +844,6 @@ func sendEnd(node *net_node.Node, sdfs_prefix string) {
 		sdfsPrefix_str := fmt.Sprintf("%100s", sdfs_prefix) //might have a problem
 		first_line := []byte("ED" + sdfsPrefix_str)
 		conn.Write(first_line)
-		time.Sleep(3 * time.second)
+		time.Sleep(3 * time.Second)
 	}
 }
