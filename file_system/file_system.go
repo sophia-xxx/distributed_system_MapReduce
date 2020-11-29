@@ -821,11 +821,15 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 
 	// Determine if we are putting a new file or updating an existing one
 	in_fs := file_in_filesystem(n, filename)
+	// debug
+	fmt.Println("file no tin sytem")
 
 	// Do not begin writing until we have waited for all
 	// other writes and reads on the file to finish  and notified
 	// other servers that we are writing
 	acquire_distributed_write_lock(n, filename)
+	// debug
+	fmt.Println("acquire lock")
 
 	// Determine if the file is already in the file system, we simply need to update
 	// it. Otherwise, we need to create a new file
@@ -835,10 +839,9 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 	} else {
 		servers = get_four_most_free_servers(n)
 	}
-
-	send_file_to_servers(n, servers, local_filepath, filename, file_size)
 	// debug
 	fmt.Println("Send file to  ", servers)
+	send_file_to_servers(n, servers, local_filepath, filename, file_size)
 
 	// Send a message to the remaining servers that the file has been put
 	notify_servers_of_file_put_complete(n, servers, filename, file_size)
