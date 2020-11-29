@@ -54,7 +54,7 @@ func ListFilesOnServer(n *net_node.Node) {
 /*
  * Return true if the file is in the filesystem and false otherwise
  */
-func file_in_filesystem(n *net_node.Node, filename string) bool {
+func isFileInFilesystem(n *net_node.Node, filename string) bool {
 	_, ok := n.Files[filename]
 	return ok
 }
@@ -230,7 +230,7 @@ func RespondToWriteStartMsg(n *net_node.Node, connection net.Conn) {
 	filename := strings.Trim(string(file_name_buff), " ")
 
 	// Wait for any preexisting reads and writes to complete
-	if file_in_filesystem(n, filename) {
+	if isFileInFilesystem(n, filename) {
 		for n.Files[filename].Writing || n.Files[filename].NumReading > 0 {
 			time.Sleep(10 * time.Millisecond)
 		}
@@ -258,36 +258,6 @@ func ReceiveWriteStrMsgResponse(n *net_node.Node, connection net.Conn) {
 	connection.Read(file_name_buff)
 	filename := strings.Trim(string(file_name_buff), " ")
 	n.Files[filename].NumAckWriting += 1
-}
-
-/*
- * This is the control function for acquiring a write lock. The steps are as follows;
- * 1) Wait for all writes and reads on the  file to complete.
- * 2) Notify the other servers that we are attempting to write the file.
- * 3) Receive responses from all of the other active servers
- */
-func acquire_distributed_write_lock(n *net_node.Node, filename string) {
-	// If we are currently writing the file,
-	// block until the write is finished
-	if file_in_filesystem(n, filename) {
-		for n.Files[filename].Writing || n.Files[filename].NumReading > 0 {
-			time.Sleep(10 * time.Millisecond)
-		}
-		n.Files[filename].Writing = true
-	} else {
-		n.Files[filename] = &pings.FileMetaDataProto{Writing: true, FileSize: 0}
-	}
-
-	// Notify the servers that we are writing a file
-	// so that other writes/reads will not be able to proceed
-	notify_other_servers_of_file_write_start(n, filename)
-
-	// Wait for the other servers to respond
-	for int(n.Files[filename].NumAckWriting) < net_node.NumActiveServ(n)-1 {
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	n.Files[filename].NumAckWriting = 0
 }
 
 /*
@@ -456,25 +426,6 @@ func acquire_distributed_read_lock(n *net_node.Node, filename string) {
 }
 
 /*
- * After we have finished reading a file, notify the other servers
- */
-func notify_servers_of_file_get_complete(n *net_node.Node, servers []int32, filename string, file_size int64) {
-	// Construct the message
-	// Format: RE[filename]
-	filename_str := fmt.Sprintf("%100s", filename)
-	msg := []byte("RE" + filename_str)
-
-	// Notify  the remaining servers
-	for i := 0; i < len(n.Table); i++ {
-		if i == int(n.Index) {
-			continue
-		}
-		addr := net_node.ConvertToAddr(n.Table[i].Address)
-		net_node.SendMsgTCP(addr, msg)
-	}
-}
-
-/*
  * Decrement NumReading after a read completes
  */
 func ReceiveFileReadCompleteMsg(n *net_node.Node, connection net.Conn) {
@@ -630,8 +581,6 @@ func DuplicateFile(n *net_node.Node, filename string, send_to_idx int32) {
 	// other writes and reads on the file to finish  and notified
 	// other servers that we are writing
 
-	acquire_distributed_write_lock(n, filename)
-
 	Send_file_tcp(n, send_to_idx, filename, filename, file_size, "", false)
 
 	// Send a message to the remaining servers that the file has been put
@@ -762,9 +711,6 @@ func DeleteFile(n *net_node.Node, filename string) {
 		fmt.Println(filename, "does not exist in system")
 	}
 
-	// A delete is a write operation
-	acquire_distributed_write_lock(n, filename)
-
 	// Delete the file from the current server
 	servers := n.Files[filename].Servers
 	on_current_server := in_server_list(n, servers)
@@ -820,14 +766,14 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 	fmt.Println("File size: ", file_size)
 
 	// Determine if we are putting a new file or updating an existing one
-	in_fs := file_in_filesystem(n, filename)
+	in_fs := isFileInFilesystem(n, filename)
 	// debug
 	fmt.Println("file no tin sytem")
 
 	// Do not begin writing until we have waited for all
 	// other writes and reads on the file to finish  and notified
 	// other servers that we are writing
-	acquire_distributed_write_lock(n, filename)
+	//acquire_distributed_write_lock(n, filename)
 	// debug
 	fmt.Println("acquire lock")
 
