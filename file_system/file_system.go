@@ -237,9 +237,10 @@ func RespondToWriteStartMsg(n *net_node.Node, connection net.Conn) {
 			fmt.Println(filename + " is writing")
 			time.Sleep(10 * time.Millisecond)
 		}
-		n.Files[filename].Writing = true
+		//n.Files[filename].Writing = true
 	} else {
-		n.Files[filename] = &pings.FileMetaDataProto{Writing: true, FileSize: 0}
+		//n.Files[filename] = &pings.FileMetaDataProto{Writing: true, FileSize: 0}
+		n.Files[filename] = &pings.FileMetaDataProto{Writing: false, FileSize: 0}
 	}
 
 	// Now that all reads are complete, acknowledge that we have finished
@@ -286,7 +287,7 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 
 	// Notify the servers that we are writing a file
 	// so that other writes/reads will not be able to proceed
-	//notify_other_servers_of_file_write_start(n, filename)
+	notify_other_servers_of_file_write_start(n, filename)
 
 	// Wait for the other servers to respond
 	// for int(n.Files[filename].NumAckWriting) < net_node.NumActiveServ(n)-1 {
