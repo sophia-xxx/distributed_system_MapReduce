@@ -275,6 +275,7 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 		}
 		n.Files[filename].Writing = true
 	} else {
+		fmt.Println(filename + "not in system, add to local list")
 		n.Files[filename] = &pings.FileMetaDataProto{Writing: true, FileSize: 0}
 	}
 
@@ -822,7 +823,9 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 	// Determine if we are putting a new file or updating an existing one
 	in_fs := file_in_filesystem(n, filename)
 	// debug
-	fmt.Println("file no tin sytem")
+	if !in_fs {
+		fmt.Println("file not in sytem")
+	}
 
 	// Do not begin writing until we have waited for all
 	// other writes and reads on the file to finish  and notified
