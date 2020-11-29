@@ -154,7 +154,7 @@ func CallMaple(n *net_node.Node, workType string, mapleExe string, mapleNum int,
 		fmt.Println("Can't start MapleJuice - Maple!")
 		return
 	}
-	fmt.Println(getTimeString() + " Start Maple!")
+	//fmt.Println(getTimeString() + " Start Maple!")
 	//todo: got message from master, maple end, delete file clips
 	//for {
 	//	time.Sleep(config.GETFILEWAIT)

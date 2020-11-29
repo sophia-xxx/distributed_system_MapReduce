@@ -802,12 +802,22 @@ func DeleteFile(n *net_node.Node, filename string) {
 func PutFile(n *net_node.Node, local_filepath string, filename string) {
 	// First, determine if the file we are putting actually exists
 
+	// debug
+	fmt.Println("Enter with: " + local_filepath)
+
 	f, err := os.Stat(local_filepath)
+	// debug
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	if os.IsNotExist(err) {
 		fmt.Println(local_filepath, "does not exist, cant put this file")
 		return
 	}
 	file_size := f.Size()
+	// debug
+	fmt.Println("File size: ", file_size)
 
 	// Determine if we are putting a new file or updating an existing one
 	in_fs := file_in_filesystem(n, filename)
