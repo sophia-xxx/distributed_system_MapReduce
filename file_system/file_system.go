@@ -232,8 +232,8 @@ func RespondToWriteStartMsg(n *net_node.Node, connection net.Conn) {
 
 	// Wait for any preexisting reads and writes to complete
 	if file_in_filesystem(n, filename) {
-		//for n.Files[filename].Writing || n.Files[filename].NumReading > 0 {
-		for n.Files[filename].Writing > 0 {
+		for n.Files[filename].Writing || n.Files[filename].NumReading > 0 {
+			//for n.Files[filename].Writing > 0 {
 			fmt.Println(filename + " is writing")
 			time.Sleep(10 * time.Millisecond)
 		}
@@ -289,12 +289,12 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 	notify_other_servers_of_file_write_start(n, filename)
 
 	// Wait for the other servers to respond
-	for int(n.Files[filename].NumAckWriting) < net_node.NumActiveServ(n)-1 {
-		fmt.Println(filename + " got " + strconv.Itoa(int(n.Files[filename].NumAckWriting)) + " acks")
-		fmt.Println("numberactive serv is " + strconv.Itoa(net_node.NumActiveServ(n)))
-		fmt.Println("waiting for all ackwriting")
-		time.Sleep(100 * time.Millisecond)
-	}
+	// for int(n.Files[filename].NumAckWriting) < net_node.NumActiveServ(n)-1 {
+	// 	fmt.Println(filename + " got " + strconv.Itoa(int(n.Files[filename].NumAckWriting)) + " acks")
+	// 	fmt.Println("numberactive serv is " + strconv.Itoa(net_node.NumActiveServ(n)))
+	// 	fmt.Println("waiting for all ackwriting")
+	// 	time.Sleep(100 * time.Millisecond)
+	// }
 
 	n.Files[filename].NumAckWriting = 0
 }
