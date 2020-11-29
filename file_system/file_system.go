@@ -275,7 +275,7 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 		}
 		n.Files[filename].Writing = true
 	} else {
-		fmt.Println(filename + "not in system, add to local list")
+		fmt.Println(filename + " not in system, add to local list")
 		n.Files[filename] = &pings.FileMetaDataProto{Writing: true, FileSize: 0}
 	}
 
@@ -285,6 +285,7 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 
 	// Wait for the other servers to respond
 	for int(n.Files[filename].NumAckWriting) < net_node.NumActiveServ(n)-1 {
+		fmt.Println("waiting for all ackwriting")
 		time.Sleep(10 * time.Millisecond)
 	}
 
@@ -1083,7 +1084,7 @@ func PutIntermediateFile(node *net_node.Node, connection net.Conn) {
 			//fmt.Println("Find match prefix " + prefixString + " filename is " + fileName)
 			fmt.Println("Beginning put  " + fileName + "  as " + sdfs_prefix + "_" + tempList[len(tempList)-1])
 			fmt.Println("File size:  ", f.Size())
-			PutFile(node, fileName, sdfs_prefix+"_"+tempList[len(tempList)-1])
+			go PutFile(node, fileName, sdfs_prefix+"_"+tempList[len(tempList)-1])
 			//time.Sleep(config.GETFILEWAIT)
 		}
 	}
