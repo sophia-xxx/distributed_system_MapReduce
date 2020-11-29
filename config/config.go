@@ -11,7 +11,7 @@ const (
 	JUICEFILEPREFIX = "juice_intermediate_file"
 
 	//FILEPREFIX  = "sdfs_intermediate_file_prefix_"
-	RPCPORT     = "6018"
+	RPCPORT     = "6020"
 	GETFILEWAIT = 3 * time.Second
 	MASTERIP    = "172.22.156.22"
 )
