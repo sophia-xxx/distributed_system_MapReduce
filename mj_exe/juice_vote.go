@@ -15,11 +15,18 @@ func main() {
 	var numOne int
 	for {
 		if !input.Scan() {
+			if numOne > numZero {
+				fmt.Println(canLeft + "," + canRight)
+			} else {
+				fmt.Println(canRight + "," + canLeft)
+			}
 			break
 		}
 		line := input.Text()
 		line = strings.TrimSpace(line)
 		str := strings.Split(line, " ")
+		//fmt.Println(line)
+
 		canPair := str[0]
 		canTemp := strings.Split(canPair, ",")
 		canLeft = canTemp[0]
@@ -33,11 +40,6 @@ func main() {
 		if strings.Compare(value, "1") == 0 {
 			numOne++
 		}
-	}
-	if numOne > numZero {
-		fmt.Println(canLeft + "," + canRight)
-	} else {
-		fmt.Println(canRight + "," + canLeft)
 	}
 
 }
