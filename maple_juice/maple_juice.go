@@ -572,6 +572,7 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 			client, _ = rpc.Dial("tcp", servers[last]+":"+config.RPCPORT)
 			task.ServerIp = servers[last]
 			err = client.Call("Server.MapleTask", task, &mapleResults)
+			fmt.Println(">>>Dial server "+server+"  TaskNum: ", task.TaskNum)
 		}
 
 		master.keyList = append(master.keyList, mapleResults...)
