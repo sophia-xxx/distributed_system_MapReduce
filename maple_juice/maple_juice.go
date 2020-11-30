@@ -502,7 +502,7 @@ master rpc method to start MapleJuice
 */
 func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 	master.keyList = nil
-	dump(master.keyList)
+	//dump(master.keyList)
 	// get all potential servers
 	//members := mjreq.NodeInfo.Table
 	aviMembers := getAllAviMember(master.NodeInfo)
