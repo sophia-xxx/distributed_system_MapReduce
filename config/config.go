@@ -12,6 +12,6 @@ const (
 
 	//FILEPREFIX  = "sdfs_intermediate_file_prefix_"
 	RPCPORT     = "6020"
-	GETFILEWAIT = 3 * time.Second
+	GETFILEWAIT = 1 * time.Second
 	MASTERIP    = "172.22.156.22"
 )

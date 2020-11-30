@@ -429,6 +429,7 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 		}
 	}
 	// clean all intermediate files in local directory
+	// todo: this clean method need to modify
 	time.Sleep(config.GETFILEWAIT)
 	if strings.Compare(args.Delete, "1") == 0 {
 		cleanIntermediateFiles()
@@ -853,6 +854,6 @@ func sendEnd(node *net_node.Node, sdfs_prefix string) {
 		sdfsPrefix_str := fmt.Sprintf("%100s", sdfs_prefix) //might have a problem
 		first_line := []byte("ED" + sdfsPrefix_str)
 		conn.Write(first_line)
-		time.Sleep(3 * time.Second)
+		time.Sleep(30 * time.Millisecond)
 	}
 }
