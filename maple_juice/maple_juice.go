@@ -554,7 +554,7 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 		client, err := rpc.Dial("tcp", server+":"+config.RPCPORT)
 		if err != nil {
 			fmt.Println("Can't dial server RPC")
-			continue
+			//continue
 		}
 		fmt.Println(">>>Dial server "+server+"  TaskNum: ", task.TaskNum)
 
