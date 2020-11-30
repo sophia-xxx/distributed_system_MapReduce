@@ -501,6 +501,8 @@ func NewMaster(n *net_node.Node) *Master {
 master rpc method to start MapleJuice
 */
 func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
+	master.keyList = nil
+	dump(master.keyList)
 	// get all potential servers
 	//members := mjreq.NodeInfo.Table
 	aviMembers := getAllAviMember(master.NodeInfo)
