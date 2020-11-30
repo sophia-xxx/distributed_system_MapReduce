@@ -587,17 +587,21 @@ func (master *Master) StartJuice(mjreq MJReq, reply *bool) error {
 		return nil
 	}
 	var servers []string
+	count := mjreq.TaskNum
 	for _, member := range aviMembers {
+		if count == 0 {
+			break
+		}
 		IPString := ChangeIPtoString(member.Address.Ip)
 		if strings.Compare(IPString, config.MASTERIP) != 0 {
 			servers = append(servers, IPString)
+			count--
 		}
 	}
 	master.FileTaskMap = make(map[string][]string)
 	master.Shuffle(master.keyList, servers, master.FileTaskMap, mjreq.Partition, mjreq.SDFSPREFIX)
 	// generate Juice task
 	// call Juice RPC
-	count := 0
 	for ip, filelist := range master.FileTaskMap {
 		server := ip
 		task := &Task{
