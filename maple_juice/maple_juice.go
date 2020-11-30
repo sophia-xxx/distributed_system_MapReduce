@@ -2,6 +2,7 @@ package maple_juice
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
@@ -315,14 +316,14 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	keyFileMap := make(map[string]*os.File)
 	if index == -1 {
 		fmt.Println("Can't find source server!")
-		return nil
+		return errors.New("no source server")
 	}
 	getFileClip(node, args.RemoteFileName, args.LocalFileName, index)
 	time.Sleep(config.GETFILEWAIT)
 	// check if we get the file
 	if !WhetherFileExist(args.LocalFileName) {
 		fmt.Println("Can't get the file:  " + args.RemoteFileName + ". Check the Internet!")
-		return nil
+		return errors.New("no such file")
 	}
 	// execute maple_exe
 	// get a "result" file after the maple_exe finished
@@ -330,14 +331,14 @@ func (mapleServer *Server) MapleTask(args Task, replyKeyList *[]string) error {
 	err := executeMapleExe(args.ExecName, args.LocalFileName, resultFileName)
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return errors.New("exec failed")
 	}
 	// scan the "result" file by line to map and using this map to output file
 
 	err = splitMapleResultFile(resultFileName, args.TaskNum, keyFileMap, args.SDFSPREFIX)
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return errors.New("split failed")
 	}
 	// send file to target node to merge
 	for key := range keyFileMap {
