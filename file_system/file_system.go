@@ -77,7 +77,7 @@ func MergeFileList(n *net_node.Node, msg *pings.TableMessasgeProto) {
 		} else {
 			n.Files[filename] = other_metadata
 			n.Files[filename].Writing = false
-			fmt.Println(filename + " Set Writing to " + strconv.FormatBool(n.Files[filename].Writing) + " | MergeFileList")
+			//fmt.Println(filename + " Set Writing to " + strconv.FormatBool(n.Files[filename].Writing) + " | MergeFileList")
 		}
 	}
 }
@@ -244,7 +244,7 @@ func RespondToWriteStartMsg(n *net_node.Node, connection net.Conn) {
 	} else {
 		//n.Files[filename] = &pings.FileMetaDataProto{Writing: true, FileSize: 0}
 		n.Files[filename] = &pings.FileMetaDataProto{Writing: false, FileSize: 0}
-		fmt.Println(filename + " Set Writing to false | RespondToWriteStartMsg")
+		//fmt.Println(filename + " Set Writing to false | RespondToWriteStartMsg")
 	}
 
 	// Now that all reads are complete, acknowledge that we have finished
