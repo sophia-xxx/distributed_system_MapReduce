@@ -10,6 +10,7 @@ juice ./mj_exe/juice_wordcount 3 wcinter final 0 hash
 
 
 put ./mj_exe/vote_input test
+put ./mj_exe/vote_input_Anna test
 get test wcinput
 maple ./mj_exe/maple_vote 3 wcinter wcinput
 juice ./mj_exe/juice_vote 3 wcinter voteinter 0 hash
