@@ -393,10 +393,12 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 		time.Sleep(config.GETFILEWAIT)
 
 		// check if we get the file
-		if !WhetherFileExist(args.LocalFileName) {
+
+		if !WhetherFileExist(local_key_filename) {
 			fmt.Println("Can't get the file:  " + keyfile + ". Check the Internet!")
 			return nil
 		}
+
 		// execute juice_exe
 		// get a "result" file after the juice_exe finished
 		// name the result file as "local_" + keyFileName + "_reduce"
