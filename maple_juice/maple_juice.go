@@ -497,12 +497,22 @@ func NewMaster(n *net_node.Node) *Master {
 	return newMaster
 }
 
+type TaskCall struct {
+	RemoteFileName string
+	SourceIp       string
+	ExeName        string
+	SdfsPrefix     string
+	call           *rpc.Call
+}
+
 /*
 master rpc method to start MapleJuice
 */
 func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 	// get all potential servers
 	//members := mjreq.NodeInfo.Table
+	var callList []*rpc.Call
+	var unfinishedTask []string
 	aviMembers := getAllAviMember(master.NodeInfo)
 	if len(aviMembers) == 0 {
 		fmt.Println("No available servers!!")
@@ -557,12 +567,22 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 		var mapleResults []string
 		// todo: better to use asynchronous call here- client.Go()
 		// todo: here we may need to deal with unfinished task then reassign it
-		err = client.Call("Server.MapleTask", task, &mapleResults)
-		if err != nil {
-			fmt.Println(err)
+		call := client.Go("Server.MapleTask", task, &mapleResults, nil)
+		callList = append(callList, call)
+		//if err != nil {
+		//	fmt.Println(err)
+		//	continue
+		//}
+		master.keyList = append(master.keyList, mapleResults...)
+	}
+	for _, tmp := range callList {
+		replyCall := <-tmp.Done
+		if replyCall.Error != nil {
+			log.Println("Need rescheduling:  ", replyCall.Error)
+			unfinishedTask = append(unfinishedTask, tmp.fileName)
+			failedIP = append(failedIP, tmp.ip)
 			continue
 		}
-		master.keyList = append(master.keyList, mapleResults...)
 	}
 
 	fmt.Println(getTimeString() + " Finish Maple!")
