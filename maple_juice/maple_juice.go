@@ -531,7 +531,7 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 		return nil
 	}
 	var last int
-	last = len(aviMembers) - 1
+	last = len(servers) - 1
 	// schedule the maple tasks
 	for index, _ := range fileClips {
 		server := servers[index]
