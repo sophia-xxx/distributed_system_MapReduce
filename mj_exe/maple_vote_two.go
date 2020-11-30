@@ -10,9 +10,14 @@ import (
 func main() {
 	// A,B
 	input := bufio.NewScanner(os.Stdin)
-	line := input.Text()
-	line = strings.TrimSpace(line)
-	//str := strings.Split(line, ",")
-	fmt.Println("1 " + line)
+	for {
+		if !input.Scan() {
+			break
+		}
+		line := input.Text()
+		line = strings.TrimSpace(line)
+		//str := strings.Split(line, ",")
+		fmt.Println("1 " + line)
+	}
 
 }
