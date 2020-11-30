@@ -377,8 +377,15 @@ func (juiceServer *Server) JuiceTask(args Task, reply *bool) error {
 
 	fileList := args.JuiceFileList
 	// loop fileList
+	var keyfileMap map[string]int
+	keyfileMap = make(map[string]int)
 	for _, keyfile := range fileList {
 		var keystr string
+		_, ok := keyfileMap[keystr]
+		if ok {
+			continue
+		}
+		keyfileMap[keystr] = 1
 		//for i := len(keyfile) - 1; i >=0; i--{
 		//	if strings.Compare(keyfile, "_")==0 {
 		//		keystr = keyfile[i+1:len(keyfile)]
