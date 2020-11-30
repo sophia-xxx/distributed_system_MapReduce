@@ -107,7 +107,7 @@ func Send_file_tcp(n *net_node.Node, server_index int32, local_filepath string, 
 		first_line = []byte("PA" + file_size_str + filename_str + sdfsPrefix_str)
 	} else {
 		//debug
-		fmt.Println(filename)
+		//fmt.Println(filename)
 		first_line = []byte("P_" + file_size_str + filename_str + sdfsPrefix_str)
 	}
 	conn.Write(first_line)
@@ -189,7 +189,7 @@ func send_file_to_servers(n *net_node.Node, file_server_indices []int32, local_f
 			write_file_locally(local_filepath, filename)
 		} else {
 			// debug
-			fmt.Println(server_index, " filename: "+local_filepath+"  "+filename)
+			//fmt.Println(server_index, " filename: "+local_filepath+"  "+filename)
 			Send_file_tcp(n, server_index, local_filepath, filename, file_size, "", false)
 		}
 	}
@@ -234,7 +234,7 @@ func RespondToWriteStartMsg(n *net_node.Node, connection net.Conn) {
 
 	// Wait for any preexisting reads and writes to complete
 	if file_in_filesystem(n, filename) {
-		fmt.Println(filename + " is in system with writing = " + strconv.FormatBool(n.Files[filename].Writing))
+		//fmt.Println(filename + " is in system with writing = " + strconv.FormatBool(n.Files[filename].Writing))
 		//for n.Files[filename].Writing || n.Files[filename].NumReading > 0 {
 		for n.Files[filename].Writing {
 			fmt.Println(filename + " is writing")
@@ -284,11 +284,11 @@ func acquire_distributed_write_lock(n *net_node.Node, filename string) {
 			time.Sleep(10 * time.Millisecond)
 		}
 		n.Files[filename].Writing = true
-		fmt.Println(filename + " Set Writing to true | acquire_distributed_write_lock fileinsystem")
+		//fmt.Println(filename + " Set Writing to true | acquire_distributed_write_lock fileinsystem")
 	} else {
-		fmt.Println(filename + " not in system, add to local list")
+		//fmt.Println(filename + " not in system, add to local list")
 		n.Files[filename] = &pings.FileMetaDataProto{Writing: true, FileSize: 0}
-		fmt.Println(filename + " Set Writing to true | acquire_distributed_write_lock filenotinsystem")
+		//fmt.Println(filename + " Set Writing to true | acquire_distributed_write_lock filenotinsystem")
 	}
 
 	// Notify the servers that we are writing a file
@@ -321,7 +321,7 @@ func notify_servers_of_file_put_complete(n *net_node.Node, servers []int32, file
 		NumReading:    0,
 	}
 	n.Files[filename] = file_meta_data
-	fmt.Println(filename + " Set Writing to false | notify_servers_of_file_put_complete")
+	//fmt.Println(filename + " Set Writing to false | notify_servers_of_file_put_complete")
 
 	// Update the current node's file size numbers
 	for i := 0; i < len(n.Files[filename].Servers); i++ {
@@ -372,11 +372,11 @@ func ReceiveFileWriteCompleteMsg(n *net_node.Node, connection net.Conn) {
 	// Update the file's metadata
 	n.Files[filename] = meta_data
 
-	if n.Files[filename].Writing == true {
-		fmt.Println(filename + " Set Writing to true | ReceiveFileWriteCompleteMsg")
-	} else {
-		fmt.Println(filename + " Set Writing to false | ReceiveFileWriteCompleteMsg")
-	}
+	// if n.Files[filename].Writing == true {
+	// 	fmt.Println(filename + " Set Writing to true | ReceiveFileWriteCompleteMsg")
+	// } else {
+	// 	fmt.Println(filename + " Set Writing to false | ReceiveFileWriteCompleteMsg")
+	// }
 
 	// Update the file size for all appropriate servers
 	for i := 0; i < len(n.Files[filename].Servers); i++ {
@@ -826,7 +826,7 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 	// First, determine if the file we are putting actually exists
 
 	// debug
-	fmt.Println("Enter with: " + local_filepath)
+	//fmt.Println("Enter with: " + local_filepath)
 
 	f, err := os.Stat(local_filepath)
 	// debug
@@ -840,7 +840,7 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 	}
 	file_size := f.Size()
 	// debug
-	fmt.Println("File size: ", file_size)
+	//fmt.Println("File size: ", file_size)
 
 	// Determine if we are putting a new file or updating an existing one
 	in_fs := file_in_filesystem(n, filename)
@@ -856,7 +856,7 @@ func PutFile(n *net_node.Node, local_filepath string, filename string) {
 	acquire_distributed_write_lock(n, filename)
 
 	// debug
-	fmt.Println("acquire lock")
+	//fmt.Println("acquire lock")
 
 	// Determine if the file is already in the file system, we simply need to update
 	// it. Otherwise, we need to create a new file
