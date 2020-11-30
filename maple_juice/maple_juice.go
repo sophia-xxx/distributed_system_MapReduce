@@ -502,6 +502,8 @@ func NewMaster(n *net_node.Node) *Master {
 master rpc method to start MapleJuice
 */
 func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
+	master.keyList = nil
+	//dump(master.keyList)
 	// get all potential servers
 	//members := mjreq.NodeInfo.Table
 	aviMembers := getAllAviMember(master.NodeInfo)
@@ -528,7 +530,8 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 		fmt.Println("There is not enough servers for maple tasks!")
 		return nil
 	}
-
+	var int last
+	last = len(aviMembers) - 1
 	// schedule the maple tasks
 	for index, _ := range fileClips {
 		server := servers[index]
@@ -559,10 +562,18 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 		// todo: better to use asynchronous call here- client.Go()
 		// todo: here we may need to deal with unfinished task then reassign it
 		err = client.Call("Server.MapleTask", task, &mapleResults)
-		if err != nil {
-			fmt.Println(err)
-			continue
+
+		// if err != nil {
+		// 	fmt.Println(err)
+		// 	continue
+		// }
+
+		for err != nil {
+			client, _ = rpc.Dial("tcp", servers[last]+":"+config.RPCPORT)
+			task.ServerIp = servers[last]
+			err = client.Call("Server.MapleTask", task, &mapleResults)
 		}
+
 		master.keyList = append(master.keyList, mapleResults...)
 	}
 

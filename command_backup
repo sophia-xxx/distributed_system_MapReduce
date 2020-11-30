@@ -7,3 +7,13 @@ get test local_wc_input
 maple ./mj_exe/wc_maple 3 wcinter wcinput
 juice ./mj_exe/juice_wordcount 3 wcinter final 1 hash
 juice ./mj_exe/juice_wordcount 3 wcinter final 0 hash
+
+
+put ./mj_exe/vote_input test
+put ./mj_exe/vote_input_Anna test
+get test wcinput
+maple ./mj_exe/maple_vote 3 wcinter wcinput
+juice ./mj_exe/juice_vote 3 wcinter voteinter 0 hash
+
+maple ./mj_exe/maple_vote_two 3 wc2inter voteinter
+juice ./mj_exe/juice_vote_two 3 wc2inter votefinal 0 hash
