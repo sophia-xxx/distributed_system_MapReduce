@@ -529,7 +529,7 @@ func (master *Master) StartMaple(mjreq MJReq, reply *bool) error {
 		fmt.Println("There is not enough servers for maple tasks!")
 		return nil
 	}
-	var int last
+	var last int
 	last = len(aviMembers) - 1
 	// schedule the maple tasks
 	for index, _ := range fileClips {
